@@ -1,0 +1,48 @@
+{
+    "Addon": {
+        "EnchantSetting": {
+            "amplifier": 1
+        },
+        "PackResourceSortData": {
+            "1_elspirit:core_portal": {
+                "createTime": 1778151136.6866207,
+                "modifyTime": 1778151136.6866207
+            },
+            "1_elspirit:sub_portal": {
+                "createTime": 1778151136.6876323,
+                "modifyTime": 1778151136.6876323
+            },
+            "1_elspirit:temp_portal": {
+                "createTime": 1778151136.6866207,
+                "modifyTime": 1778151136.6866207
+            }
+        },
+        "PlayerEffectSetting": {
+            "amplifier": 1,
+            "duration": 10
+        },
+        "PresetInstanceTreeData": [
+
+        ]
+    },
+    "UI": {
+        "customPrefabGroupExpand": [
+
+        ],
+        "expandData": {
+            "prefab": {
+                "base_controls.background": [
+                    "/netease_prefab_screen"
+                ]
+            },
+            "screen": {
+                "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\modsapi_r\\ui\\base_controls.json": [
+                    "/netease_prefab_screen"
+                ],
+                "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\modsapi_r\\ui\\debug.json": [
+
+                ]
+            }
+        }
+    }
+}

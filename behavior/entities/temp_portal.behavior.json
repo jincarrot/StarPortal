@@ -1,0 +1,794 @@
+{
+	"format_version": "1.21.90",
+	"minecraft:entity": {
+		"description": {
+			"identifier": "elspirit:temp_portal",
+			"is_spawnable": false,
+			"is_summonable": true,
+			"is_experimental": false,
+			"properties": {
+				"elspirit:color": {
+					"type": "int",
+					"range": [
+						0,
+						4
+					],
+					"default": 0,
+					"client_sync": true
+				},
+				"elspirit:scale": {
+					"type": "int",
+					"range": [
+						1,
+						16
+					],
+					"default": 1,
+					"client_sync": true
+				}
+			}
+		},
+		"component_groups": {
+			"portal:size1": {
+				"minecraft:collision_box": {
+					"height": 0.5,
+					"width": 0.35
+				}
+			},
+			"portal:size2": {
+				"minecraft:collision_box": {
+					"height": 0.81,
+					"width": 0.5
+				}
+			},
+			"portal:size3": {
+				"minecraft:collision_box": {
+					"height": 1.2,
+					"width": 0.6
+				}
+			},
+			"portal:size4": {
+				"minecraft:collision_box": {
+					"height": 1.6,
+					"width": 1.0
+				}
+			},
+			"portal:size5": {
+				"minecraft:collision_box": {
+					"height": 2.0,
+					"width": 1.5
+				}
+			},
+			"portal:size6": {
+				"minecraft:collision_box": {
+					"height": 2.5,
+					"width": 1.8
+				}
+			},
+			"portal:size7": {
+				"minecraft:collision_box": {
+					"height": 3.0,
+					"width": 2.0
+				}
+			},
+			"portal:size8": {
+				"minecraft:collision_box": {
+					"height": 3.5,
+					"width": 2.2
+				}
+			},
+			"portal:size9": {
+				"minecraft:collision_box": {
+					"height": 3.9,
+					"width": 2.4
+				}
+			},
+			"portal:size10": {
+				"minecraft:collision_box": {
+					"height": 4.2,
+					"width": 2.6
+				}
+			},
+			"portal:size11": {
+				"minecraft:collision_box": {
+					"height": 4.6,
+					"width": 2.8
+				}
+			},
+			"portal:size12": {
+				"minecraft:collision_box": {
+					"height": 5.0,
+					"width": 3.0
+				}
+			},
+			"portal:size13": {
+				"minecraft:collision_box": {
+					"height": 5.3,
+					"width": 3.2
+				}
+			},
+			"portal:size14": {
+				"minecraft:collision_box": {
+					"height": 5.8,
+					"width": 3.4
+				}
+			},
+			"portal:size15": {
+				"minecraft:collision_box": {
+					"height": 6.2,
+					"width": 3.7
+				}
+			},
+			"portal:size16": {
+				"minecraft:collision_box": {
+					"height": 6.5,
+					"width": 4.0
+				}
+			}
+		},
+		"components": {
+			"minecraft:physics": {
+				"has_gravity": false,
+				"has_collision": true
+			},
+			"minecraft:collision_box": {
+				"height": 0.6,
+				"width": 0.35
+			},
+			"minecraft:pushable": {
+				"is_pushable": false
+			},
+			"minecraft:push_through": {
+				"value": 1
+			},
+			"minecraft:interact": {
+				"interactions": [
+					{
+						"interact_text": "传送"
+					}
+				]
+			},
+			"minecraft:nameable": {
+				"always_show": false,
+				"allow_name_tag_renaming": false
+			},
+			"minecraft:damage_sensor": {
+				"triggers": [
+					{
+						"deals_damage": "no",
+						"cause": "all"
+					}
+				]
+			},
+			"minecraft:environment_sensor": {
+				"triggers": [
+					{
+						"event": "elspirit:scale_to_1",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 1
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_2",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 2
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_3",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 3
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_4",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 4
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_5",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 5
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_6",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 6
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_7",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 7
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_8",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 8
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_9",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 9
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_10",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 10
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_11",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 11
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_12",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 12
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_13",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 13
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_14",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 14
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_15",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 15
+								}
+							]
+						}
+					},
+					{
+						"event": "elspirit:scale_to_16",
+						"filters": {
+							"all_of": [
+								{
+									"domain": "elspirit:scale",
+									"operator": "==",
+									"test": "int_property",
+									"value": 16
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"events": {
+			"elspirit:scale_to_1": {
+				"add": {
+					"component_groups": [
+						"portal:size1"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_2": {
+				"add": {
+					"component_groups": [
+						"portal:size2"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_3": {
+				"add": {
+					"component_groups": [
+						"portal:size3"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_4": {
+				"add": {
+					"component_groups": [
+						"portal:size4"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_5": {
+				"add": {
+					"component_groups": [
+						"portal:size5"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_6": {
+				"add": {
+					"component_groups": [
+						"portal:size6"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_7": {
+				"add": {
+					"component_groups": [
+						"portal:size7"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_8": {
+				"add": {
+					"component_groups": [
+						"portal:size8"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_9": {
+				"add": {
+					"component_groups": [
+						"portal:size9"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_10": {
+				"add": {
+					"component_groups": [
+						"portal:size10"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_11": {
+				"add": {
+					"component_groups": [
+						"portal:size11"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_12": {
+				"add": {
+					"component_groups": [
+						"portal:size12"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_13": {
+				"add": {
+					"component_groups": [
+						"portal:size13"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size14",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_14": {
+				"add": {
+					"component_groups": [
+						"portal:size14"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size15",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_15": {
+				"add": {
+					"component_groups": [
+						"portal:size15"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size16"
+					]
+				}
+			},
+			"elspirit:scale_to_16": {
+				"add": {
+					"component_groups": [
+						"portal:size16"
+					]
+				},
+				"remove": {
+					"component_groups": [
+						"portal:size1",
+						"portal:size2",
+						"portal:size3",
+						"portal:size4",
+						"portal:size5",
+						"portal:size6",
+						"portal:size7",
+						"portal:size8",
+						"portal:size9",
+						"portal:size10",
+						"portal:size11",
+						"portal:size12",
+						"portal:size13",
+						"portal:size14",
+						"portal:size15"
+					]
+				}
+			}
+		}
+	}
+}

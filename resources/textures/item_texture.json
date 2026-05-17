@@ -1,0 +1,13 @@
+{
+	"texture_data": {
+		"core_portal": {
+			"textures": "textures/items/core_portal.png"
+		},
+		"sub_portal": {
+			"textures": "textures/items/sub_portal.png"
+		},
+		"stars_controller": {
+			"textures": "textures/items/stars_controller.png"
+		}
+	}
+}

@@ -1,0 +1,19 @@
+{
+    "format_version": "1.10.0",
+    "render_controllers": {
+        "controller.render.portal": {
+            "geometry": "geometry.default",
+            "materials": [
+                {
+                    "*": "material.default"
+                }
+            ],
+            "arrays": {
+                "textures": {
+                    "Array.textures": ["texture.p0", "texture.p1", "texture.p2", "texture.p3"]
+                }
+            },
+            "textures": ["Array.textures[q.property('elspirit:color')]"]
+        }
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "Arena.Component.Namespace": "xewdn",
+    "FirstTabSetting": 1,
+    "ShortItemSettings": [
+        "modsapi_r\\ui",
+        "modsapi_r\\models",
+        "modsapi_r\\textures"
+    ],
+    "Uluru.autoLayerDict": {
+
+    },
+    "Uluru.checkSuspectOldUI": true
+}
