@@ -7,4 +7,8 @@ class ClientAfterEvents:
     @property
     def serverEventReceive(self) -> ServerEventReceiveAfterEventSignal:
         """Event triggered when server sends data to client."""
+
+    @property
+    def serverRequestData(self) -> ServerRequestDataAfterEventSignal:
+        """Event triggered when server requests data from client."""
     

@@ -20,6 +20,11 @@ class Modules(ServerSystem):
     def Observable(self):
         from ..modules.server_ui.FormData import Observable as o
         return o
+    
+    @property
+    def CustomControlGroup(self):
+        from ..modules.server_ui.FormData import CustomControlGroup as c
+        return c
 
     @property
     def MoreUI(self):
@@ -30,4 +35,24 @@ class Modules(ServerSystem):
     def MolangVariableMap(self):
         from ..modules.server.MolangVariableMap import MolangVariableMap as m
         return m
+    
+    @property
+    def ActionFormData(self):
+        from ..modules.server_ui.FormData import ActionFormData as a
+        return a
+    
+    @property
+    def ModalFormData(self):
+        from ..modules.server_ui.FormData import ModalFormData as m
+        return m
+    
+    @property
+    def Vector3(self):
+        from ..interfaces.Vector import Vector3 as v
+        return v
+    
+    @property
+    def BlockVolume(self):
+        from ..modules.server.Block import BlockVolume as b
+        return b
     

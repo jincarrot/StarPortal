@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import math, random
 import mod.client.extraClientApi as clientApi
 from ClientEvents import *
 from Player import *
@@ -6,7 +7,10 @@ from Screen import Screen
 from Entity import ClientEntity
 from Audio import Audio
 from Particle import Particle
+from DynamicParticle import DynamicParticle
 from ...interfaces.Vector import Vector3
+from ...interfaces.ParticleOptions import DynamicParticleOptions, DynamicParticlePattern
+from ...utils.promise import Promise
 
 ClientSystem = clientApi.GetClientSystemCls()
 CComp = clientApi.GetEngineCompFactory()
@@ -21,6 +25,11 @@ class Client(ClientSystem):
         self.__screen = Screen()
         self.__audio = Audio()
 
+    @property
+    def levelId(self):
+        """Runtime identifier of the current level."""
+        return clientApi.GetLevelId()
+    
     @property
     def localPlayer(self):
         """The local player."""
@@ -47,6 +56,18 @@ class Client(ClientSystem):
         """Sends data to server. Server can listen to this data by subscribing to the event with the same name."""
         self.NotifyToServer("clientSendToServer", {"eventName": eventName, "data": data})
 
+    def getDataFromServer(self, dataName, data=None):
+        idx = random.randint(0, 999999)
+        promise = Promise()
+        self.sendToServer("getData:" + dataName, {"id": idx,"data": data})
+        def processReturnedData(returnedData):
+            promise._run(returnedData.data)
+        self.afterEvents.serverEventReceive.subscribe("getDataSuccess:" + str(idx), processReturnedData)
+        return promise
+    
+    def runServerFunc(self, funcName, *args, **kwargs):
+        return self.getDataFromServer("runServerFunc", {"funcName": funcName, "args": args, "kwargs": kwargs})
+    
     def getEntity(self, entityId):
         """Gets an entity by its runtime identifier."""
         entity = ClientEntity(entityId)
@@ -65,4 +86,9 @@ class Client(ClientSystem):
         location = Vector3(location)
         parId = CComp.CreateParticleSystem(clientApi.GetLevelId()).Create(typeId, location.getTuple())
         return Particle(parId)
+
+    def spawnDynamicParticle(self, pattern, location, options={}):
+        # type: (DynamicParticlePattern, Vector3, DynamicParticleOptions) -> None
+        """创建一个表达式粒子，能够通过数学表达式动态的绘制图案。"""
+        return DynamicParticle(pattern, location, options)
 

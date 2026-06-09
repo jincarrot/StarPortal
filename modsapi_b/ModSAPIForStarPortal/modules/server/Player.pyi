@@ -58,12 +58,6 @@ class Player(Entity):
     def mainHand(self, item):
         # type: (ItemStack) -> None
         pass
-    
-    def applyKnockback(self, horizontalForce, verticalStrength):
-        # type: (dict | VectorXZ, float) -> None
-        """
-        Applies impulse vector to the current velocity of the entity.
-        """
 
     def sendMessage(self, message):
         # type: (str) -> None
@@ -73,12 +67,9 @@ class Player(Entity):
         # type: () -> Vector3
         """Gets the current spawn point of the player."""
 
-    def sendToast(self, message, title=""):
-        # type: (str, str) -> None
-        """
-        send a toast to player
-        """
-
     def spawnParticle(self, effectName: str, location: Vector3, molangVariables: MolangVariableMap = None):
         """Creates a new particle emitter at a specified location in the world."""
+
+    def getGameMode(self) -> GameMode:
+        """Retrieves the active gamemode for this player, if specified."""
 

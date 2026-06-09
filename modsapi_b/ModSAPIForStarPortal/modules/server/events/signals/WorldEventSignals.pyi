@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # stub file for world events module
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Any
 import types
 from ..EventBases import Events
+from ..core.WorldEvents import StartupBeforeEvent
 
 class ExplosionAfterEventSignal(Events):
     """
@@ -38,6 +39,14 @@ class ClientEventReceiveAfterEventSignal(Events):
         Registers a new ScriptEvent handler.
         """
 
+class ClientRequestDataAfterEventSignal(Events):
+    """
+    Allows for registering an event handler that responds to inbound /scriptevent commands.
+    """
+
+    def subscribe(self, eventName: str, callback: Callable[[], Any], options={}):
+        """"""
+
 class ExplosionBeforeEventSignal(Events):
     """
     Manages callbacks that are connected to when an explosion occurs, as it impacts individual blocks.
@@ -47,3 +56,11 @@ class ExplosionBeforeEventSignal(Events):
         Adds a callback that will be called when an explosion occurs, as it impacts individual blocks.
         """
         ...
+
+class StartupBeforeEventSignal(Events):
+
+    def subscribe(self, callback: Callable[[StartupBeforeEvent], None]) -> None:
+        # type: (types.FunctionType) -> None
+        """
+        Adds a callback that will be called when an explosion occurs, as it impacts individual blocks.
+        """

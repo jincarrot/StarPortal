@@ -81,6 +81,36 @@ class ClientEventReceiveAfterEventSignal(Events):
         """
         self._events[id(callback)] = EventListener(self.__eventName, callback, options, self._check, eventName, ClientEventReceiveAfterEvent, Namespace, "client")
 
+class ClientRequestDataAfterEventSignal(Events):
+    """
+    Allows for registering an event handler that responds to inbound /scriptevent commands.
+    """
+
+    def __init__(self):
+        Events.__init__(self)
+        self.__eventName = "clientSendToServer"
+
+    def _check(self, obj, data, valueName):
+        # type: (EventListener, dict, str) -> bool
+        if data['eventName'] == valueName:
+            return True
+        return False
+
+    def subscribe(self, eventName, callback, options={}):
+        # type: (str, types.FunctionType, dict) -> None
+        """
+        Registers a new ScriptEvent handler.
+        """
+        eventName = "getData:" + eventName
+        def real(data):
+            # type: (ClientRequestDataAfterEvent) -> None
+            idx = data.data['id']
+            data.data = data.data['data']
+            result = callback(data)
+            from .....utils.system import systems
+            systems.system.sendToAllClients("getDataSuccess:" + str(idx), result)
+        self._events[id(callback)] = EventListener(self.__eventName, real, options, self._check, eventName, ClientRequestDataAfterEvent, Namespace, "client")
+
 
 class ExplosionBeforeEventSignal(Events):
     """
@@ -98,3 +128,19 @@ class ExplosionBeforeEventSignal(Events):
         """
         
         self._events[id(callback)] = EventListener(self.__eventName, callback, None, None, None, ExplosionBeforeEvent)
+
+class StartupBeforeEventSignal(Events):
+    """
+    """
+
+    def __init__(self):
+        Events.__init__(self)
+        self.__eventName = "None"
+
+    def subscribe(self, callback):
+        # type: (types.FunctionType) -> None
+        """
+        Adds a callback that will be called when an explosion occurs, as it impacts individual blocks.
+        """
+        from ..core.WorldEvents import StartupBeforeEvent
+        callback(StartupBeforeEvent())

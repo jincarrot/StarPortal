@@ -5,6 +5,7 @@ from modules import Modules
 from enums import Enums
 from components import Components
 
+import typing
 class systems:
 
     @property
@@ -26,3 +27,8 @@ class systems:
     @property
     def components() -> Components: 
         """Components"""
+
+    @property
+    def clientCallable() -> typing.Callable[[typing.Callable[..., None]], None]:
+        """A decorator that allows a server function to be called by the client."""
+        pass

@@ -6,6 +6,7 @@ from ....interfaces.Vector import Vector3
 from ....interfaces.TickingAreaOptions import *
 from ....interfaces.TickingArea import *
 from ....interfaces.BlockBoundingBox import *
+from ....utils.promise import Promise
 
 SComp = serverApi.GetEngineCompFactory()
 
@@ -15,18 +16,6 @@ def hasArg(callback):
         if hasattr(callback, "im_self"):
             args -= 1
         return args > 0
-
-class Promise(object):
-    """Promise<TickingArea.>"""
-
-    def __init__(self):
-        def default(arg):
-            # type: (TickingArea) -> None
-            pass
-        self.callback = default
-
-    def then(self, callback):
-        self.callback = callback
 
 class TickingAreaManager:
     """
@@ -68,7 +57,9 @@ class TickingAreaManager:
         if type(options) == dict:
             options = TickingAreaOptions(options)
         comp = SComp.CreateChunkSource(serverApi.GetLevelId())
-        comp.SetAddArea(identifier, options.dimension.dimId, options._from.getTuple(), options.to.getTuple())
+        minCorner = (options._from.x - 80, options._from.y, options._from.z - 80)
+        maxCorner = (options.to.x + 80, options.to.y, options.to.z + 80)
+        comp.SetAddArea(identifier, options.dimension.dimId, minCorner, maxCorner)
         scale = options._from - options.to
         xAmount = int(scale.x) % 16 + 1
         zAmount = int(scale.z) % 16 + 1
@@ -77,9 +68,9 @@ class TickingAreaManager:
         promise = Promise()
         def finishLoad():
             if hasArg(promise.callback):
-                promise.callback(tickingArea)
+                promise._run(tickingArea)
             else:
-                promise.callback()
+                promise._run()
         minCorner = (
             int(min(options._from.getTuple()[0], options.to.getTuple()[0])), 
             int(min(options._from.getTuple()[1], options.to.getTuple()[1])), 

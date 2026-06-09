@@ -10,6 +10,7 @@ class Systems:
     _enums = None
     _core = None
     _components = None
+    _decorators = None
 
     @property
     def world(self):
@@ -58,5 +59,13 @@ class Systems:
         components = serverApi.GetSystem(Namespace, "components")
         self._components = components
         return components
+    
+    @property
+    def decorators(self):
+        if self._decorators:
+            return self._decorators
+        decorators = serverApi.GetSystem(Namespace, "server_decorators")
+        self._decorators = decorators
+        return decorators
     
 systems = Systems()

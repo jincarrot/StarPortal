@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from ...architect.scheduler import Scheduler
 import mod.server.extraServerApi as serverApi
-from SystemEvents import SystemAfterEvents
+from SystemEvents import SystemAfterEvents, SystemBeforeEvents
+from ...utils.promise import Promise
+import random
+from ...config import Namespace
 
 ServerSystem = serverApi.GetServerSystemCls()
 
@@ -16,10 +19,16 @@ class System(ServerSystem):
         ServerSystem.__init__(self, namespace, systemName)
         # self._initScheduler()
         self.__afterEvents = SystemAfterEvents()
+        self.__beforeEvents = SystemBeforeEvents()
         self.__timers = {}
         self.__timerId = 0
         self.__comp = serverApi.GetEngineCompFactory().CreateGame(serverApi.GetLevelId())
+        self.__exportedFunctions = {}
 
+    @property
+    def beforeEvents(self):
+        return self.__beforeEvents
+    
     @property
     def afterEvents(self):
         """Returns a collection of after-events for system-level operations."""
@@ -74,7 +83,7 @@ class System(ServerSystem):
         self.__comp.CancelTimer(self.__timers[runId])
         del self.__timers[runId]
 
-    def sendToClient(self, player, eventName, data):
+    def sendToClient(self, player, eventName, data=None):
         """Send data to client."""
         from ..server.Player import Player
         players = []
@@ -97,8 +106,30 @@ class System(ServerSystem):
         """Send data to all clients."""
         self.BroadcastToAllClient("serverSendToClient", {"eventName": eventName, "data": data})
 
+    def getDataFromClient(self, player, dataName, data=None):
+        if isinstance(player, list):
+            raise TypeError("player should be a Player | str, but got list.")
+        idx = random.randint(0, 999999)
+        promise = Promise()
+        self.sendToClient(player, "getData:" + dataName, {"id": idx, "data": data})
+        def processReturnedData(returnedData):
+            promise._run(returnedData.data)
+        self.afterEvents.clientEventReceive.subscribe("getDataSuccess:" + str(idx), processReturnedData)
+        return promise
+    
+    def runClientFunc(self, player, funcName, *args, **kwargs):
+        return self.getDataFromClient(player, "runClientFunc", {"funcName": funcName, "args": args, "kwargs": kwargs})
+
     def runJob(self, generator):
         return self._scriptScheduler.addSuspendableTask('SchedulerTask', generator)
     
     def clearJob(self, jobId):
         self.clearRun(jobId)
+
+    def exportFunc(self, identifier, callback):
+        """Exports a function that can be called from other systems or modules."""
+        self.__exportedFunctions[identifier] = callback
+
+    def importFunc(self, identifier):
+        """Imports a function that was exported by another system or module."""
+        return self.__exportedFunctions.get(identifier, None)

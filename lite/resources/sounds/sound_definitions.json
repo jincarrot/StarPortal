@@ -1,0 +1,94 @@
+{
+    "dy_load_list": [
+
+    ],
+    "format_version": "1.14.0",
+    "sound_definitions": {
+        "star.gain": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "load_on_low_memory": true,
+                    "name": "sounds/gain_star",
+                    "volume": 1
+                }
+            ]
+        },
+        "spirit.gain": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "load_on_low_memory": true,
+                    "name": "sounds/gain_spirit",
+                    "volume": 1
+                }
+            ]
+        },
+        "star.waiting": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "load_on_low_memory": true,
+                    "name": "sounds/light_waiting",
+                    "volume": 1
+                }
+            ]
+        },
+        "star.flyto": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "load_on_low_memory": true,
+                    "name": "sounds/star_fly_to",
+                    "volume": 1
+                }
+            ]
+        },
+        "dialog.show": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "load_on_low_memory": true,
+                    "name": "sounds/show_dialog",
+                    "volume": 1
+                }
+            ]
+        },
+        "star.road": {
+            "category": "block",
+            "sounds": [
+                {
+                    "name": "sounds/1"
+                },
+                {
+                    "name": "sounds/2"
+                },
+                {
+                    "name": "sounds/3"
+                },
+                {
+                    "name": "sounds/4"
+                },
+                {
+                    "name": "sounds/5"
+                }
+            ]
+        },
+        "els.main_theme_test": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "name": "sounds/main_theme"
+                }
+            ]
+        },
+        "dark_iron.dark_shield": {
+            "category": "neutral",
+            "sounds": [
+                {
+                    "name": "sounds/dark_iron_shield"
+                }
+            ]
+        }
+    }
+}

@@ -8,6 +8,9 @@ comp = serverApi.GetEngineCompFactory()
 
 
 class Vector3:
+    """
+    Contains a description of a vector.
+    """
 
     x: float
     y: float
@@ -37,6 +40,9 @@ class Vector3:
     
     def getIntTuple(self) -> tuple[int, int, int]:
         """"""
+
+    @property
+    def distance(self) -> float: ...
 
 class Vector2(TypedDict):
     """

@@ -54,7 +54,6 @@ class ItemStartUseOnAfterEventSignal(Events):
         """
         Adds a callback that will be called when an item is used.
         """
-        
         self._events[id(callback)] = EventListener(self.__eventName, callback, None, None, None, ItemStartUseOnAfterEvent)
 
 class ItemCompleteUseAfterEventSignal(Events):
@@ -91,7 +90,6 @@ class PlayerDimensionChangeAfterEventSignal(Events):
         """
         Subscribes the specified callback to a player dimension change after event.
         """
-        
         self._events[id(callback)] = EventListener(self.__eventName, callback, None, None, None, PlayerDimensionChangeAfterEvent)
 
 class PlayerInteractWithEntityAfterEventSignal(Events):
@@ -108,6 +106,7 @@ class PlayerInteractWithEntityAfterEventSignal(Events):
         """
         Adds a callback that will be called after a player interacts with an entity.
         """
+        EventListener("PlayerInteractServerEvent", callback, None, None, None, InteractEvent)
         self._events[id(callback)] = EventListener(self.__eventName, callback, None, None, None, PlayerInteractWithEntityAfterEvent)
 
 class PlayerInventoryItemChangeAfterEventSignal(Events):

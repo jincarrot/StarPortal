@@ -2,6 +2,7 @@
 import mod.client.extraClientApi as clientApi
 from client import systems
 from ..interfaces.Vector import Vector3
+from ..config import Namespace
 
 ClientSystem = clientApi.GetClientSystemCls()
 
@@ -11,6 +12,7 @@ CComp = clientApi.GetEngineCompFactory()
 class Core(ClientSystem):
     def __init__(self, namespace, systemName):
         ClientSystem.__init__(self, namespace, systemName)
+        self.serverCallableFunctions = {}
         self.__ListenEvent()
 
     def __ListenEvent(self):
@@ -22,9 +24,27 @@ class Core(ClientSystem):
         client.afterEvents.serverEventReceive.subscribe("combineCustomForm", self.combineCustomForm)
         client.afterEvents.serverEventReceive.subscribe("sendMoreCustomForm", self.sendMoreCustomForm)
         client.afterEvents.serverEventReceive.subscribe("closeMoreUI", self.closeMoreUI)
+        client.afterEvents.serverEventReceive.subscribe("showActionForm", self.showActionForm)
+        client.afterEvents.serverEventReceive.subscribe("showModalForm", self.showModalForm)
         client.afterEvents.serverEventReceive.subscribe("modsapi.dimension.spawnParticle", self.spawnParticle)
+        client.afterEvents.serverRequestData.subscribe("runClientFunc", self.runClientFunc)
         self.ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "UiInitFinished", self, self.initUI)
         self.ListenForEvent(clientApi.GetEngineNamespace(), clientApi.GetEngineSystemName(), "OnLocalPlayerStopLoading", self, self.onPlayerSpawn)
+
+    def runClientFunc(self, data):
+        data = data.data
+        funcName = data['funcName']
+        args = data['args']
+        kwargs = data['kwargs']
+        if funcName in self.serverCallableFunctions:
+            result = self.serverCallableFunctions[funcName](*args, **kwargs)
+            return result
+        
+    def showActionForm(self, data):
+        clientApi.PushScreen(Namespace, "ActionForm", data)
+
+    def showModalForm(self, data):
+        clientApi.PushScreen(Namespace, "ModalForm", data)
 
     def onPlayerSpawn(self, arg):
         self.NotifyToServer("playerSpawn", {"playerId": clientApi.GetLocalPlayerId(), "initial": True})
@@ -58,8 +78,10 @@ class Core(ClientSystem):
                 particle.setMolang("%s.z" % molang, value['value'][2])
 
     def initUI(self, data):
-        clientApi.RegisterUI("server_ui", "CustomForm", "%s.modules.server_ui.Forms.CustomFormUI" % self.__module__.split(".")[0], "server_forms.custom_form")
-        clientApi.RegisterUI("server_ui", "MoreUI", "%s.modules.server_ui.Forms.More" % self.__module__.split(".")[0], "server_forms.moreui")
+        clientApi.RegisterUI(Namespace, "ActionForm", "%s.modules.server_ui.Forms.ActionForm" % self.__module__.split(".")[0], "server_forms.action_form")
+        clientApi.RegisterUI(Namespace, "ModalForm", "%s.modules.server_ui.Forms.ModalForm" % self.__module__.split(".")[0], "server_forms.modal_form")
+        clientApi.RegisterUI(Namespace, "CustomForm", "%s.modules.server_ui.Forms.CustomFormUI" % self.__module__.split(".")[0], "server_forms.custom_form")
+        clientApi.RegisterUI(Namespace, "MoreUI", "%s.modules.server_ui.Forms.More" % self.__module__.split(".")[0], "server_forms.moreui")
         clientApi.RegisterUI("ModSAPI", "CustomUI", "%s.modules.server_ui.UI._CustomUI" % self.__module__.split(".")[0], "server_forms.custom_ui")
 
     def sendCustomForm(self, data):
@@ -71,7 +93,7 @@ class Core(ClientSystem):
                     screen.GetBaseUIControl(form.basePath).SetVisible(True)
         if hasattr(screen, "update"):
             return
-        clientApi.PushScreen("server_ui", "CustomForm", data)
+        clientApi.PushScreen(Namespace, "CustomForm", data)
 
     def updateCustomForm(self, data):
         data = data.data
@@ -118,4 +140,4 @@ class Core(ClientSystem):
         data = data.data
         screen = clientApi.GetTopScreen()
         if not hasattr(screen, "isMoreUI"):
-            clientApi.PushScreen("server_ui", "MoreUI", data)
+            clientApi.PushScreen(Namespace, "MoreUI", data)

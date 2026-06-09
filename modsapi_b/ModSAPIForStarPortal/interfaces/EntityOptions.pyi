@@ -103,9 +103,9 @@ class EntityFilter(TypedDict):
     """If this value is set, this event will only fire if the impacted entities' min vertical rotation matches this parameter."""
     name: str
     """If this value is set, this event will only fire if the impacted"""
-    propertyOptions: dict
+    propertyOptions: list[EntityQueryPropertyOptions]
     """If this value is set, this event will only fire if the impacted entities' property options match this parameter."""
-    scoreOptions: dict
+    scoreOptions: list[EntityQueryScoreOptions]
     """If this value is set, this event will only fire if the impacted entities' score options match this parameter."""
     tags: list[str]
     """If this value is set, this event will only fire if the impacted entities' tags match this parameter."""

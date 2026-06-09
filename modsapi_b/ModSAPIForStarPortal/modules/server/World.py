@@ -1,4 +1,6 @@
 # # -*- coding: utf-8 -*-
+from copy import deepcopy
+
 import mod.server.extraServerApi as serverApi
 
 from Entity import *
@@ -13,16 +15,15 @@ from managers.TickingAreaManager import *
 from managers.StructureManager import *
 # from decorators import *
 from ...utils.system import systems
+from ...utils.entity import queryEntities
 
 ServerSystem = serverApi.GetServerSystemCls()
 comp = serverApi.GetEngineCompFactory()
-core = systems.core
 
 class World(ServerSystem):
 
     def __init__(self, namespace, systemName):
         ServerSystem.__init__(self, namespace, systemName)
-        self.__entities = {} # type: dict[str, Entity]
         self.__afterEvents = WorldAfterEvents()
         self.__beforeEvents = WorldBeforeEvents()
         self.__gameRules = GameRules()
@@ -31,12 +32,22 @@ class World(ServerSystem):
         self.__structureManager = StructureManager()
 
     @property
+    def levelId(self):
+        """Runtime identifier of the current level."""
+        return serverApi.GetLevelId()
+    
+    @property
     def afterEvents(self):
         return self.__afterEvents
 
     @property
     def beforeEvents(self):
         return self.__beforeEvents
+    
+    @property
+    def levelId(self):
+        """Runtime identifier of the current level."""
+        return serverApi.GetLevelId()
 
     @property
     def gameRules(self):
@@ -59,25 +70,19 @@ class World(ServerSystem):
         playerIds = serverApi.GetPlayerList()
         players = []
         for playerId in playerIds:
-            if playerId in core.entities:
-                player = core.entities[core.entities.index(playerId)]
+            if playerId in systems.core.entities:
+                player = systems.core.entities[systems.core.entities.index(playerId)]
                 players.append(player)
             else:
                 player = Player(playerId)
-                core.entities.append(player)
+                systems.core.entities.append(player)
                 players.append(player)
         return players
 
     @staticmethod
     def getPlayers(options={}):
-        options = EntityQueryOptions(options) if type(options) == dict else options
-        players = []
-        playerIds = serverApi.GetPlayerList()
-        if options.selfCheck():
-            playerIds = options.check(playerIds)
-            for playerId in playerIds:
-                players.append(systems.core.entities[systems.core.entities.index(playerId)])
-        return players
+        options['type'] = 'minecraft:player'
+        return queryEntities(options)
 
     @staticmethod
     def getDimension(dimensionId):
@@ -85,11 +90,14 @@ class World(ServerSystem):
 
     @staticmethod
     def setDynamicProperty(identifier, value):
-        SComp.CreateExtraData(serverApi.GetLevelId()).SetExtraData(identifier, value)
+        SComp.CreateExtraData(serverApi.GetLevelId()).SetExtraData(identifier, deepcopy(value))
 
     @staticmethod
     def getDynamicProperty(identifier):
-        return SComp.CreateExtraData(serverApi.GetLevelId()).GetExtraData(identifier)
+        data = SComp.CreateExtraData(serverApi.GetLevelId()).GetExtraData(identifier)
+        if isinstance(data, dict):
+            return deepcopy(data)
+        return data
     
     @staticmethod
     def getDynamicPropertyIds():
@@ -111,8 +119,8 @@ class World(ServerSystem):
         return count
     
     def getEntity(self, id):
-        if id in core.entities:
-            return core.entities[core.entities.index(id)]
+        if id in systems.core.entities:
+            return systems.core.entities[systems.core.entities.index(id)]
         
     @staticmethod
     def getTimeOfDay():
@@ -134,7 +142,8 @@ class World(ServerSystem):
         self.BroadcastToAllClient("setMusicState", {"state": False})
 
     def sendMessage(self, message):
-        SComp.CreateMsg(serverApi.GetLevelId()).SendMsg("服务器", message)
+        for player in self.getAllPlayers():
+            player.sendMessage("[服务器]" + message)
 
     @staticmethod
     def getLootTableManager():

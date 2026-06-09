@@ -23,6 +23,31 @@ class EntityQueryScoreOptions:
         self.maxScore = data['maxScore'] if 'maxScore' in data else 2147483647
         """If defined, only players that have a score equal to or under maxScore are included."""
 
+class EntityQueryPropertyValue:
+
+    def __init__(self, data):
+        self.data = data
+        if type(self.data).__name__ != 'dict':
+            self.data = {"equals": self.data}
+
+    def __eq__(self, other):
+        if "equals" in self.data:
+            return other == self.data['equals']
+        if "lessThan" in self.data:
+            return other < self.data['lessThan']
+        if "greaterThan" in self.data:
+            return other > self.data['greaterThan']
+        if "lessThanOrEquals" in self.data:
+            return other <= self.data['lessThanOrEquals']
+        if "greaterThanOrEquals" in self.data:
+            return other >= self.data['greaterThanOrEquals']
+        if "notEquals" in self.data:
+            return other != self.data['notEquals']
+        if "lowerBound" in self.data and "upperBound" in self.data:
+            return other >= self.data['lowerBound'] and other <= self.data['upperBound']
+        return False
+        
+    
 class EntityQueryPropertyOptions:
     """"""
 
@@ -88,13 +113,11 @@ class EntityEventOptions(object):
 
     @property
     def entities(self):
-        # type: () -> list[Entity]
         """If this value is set, this event will only fire for entities that match the entities within this collection."""
         return self.__entities
 
     @entities.setter
     def entities(self, data):
-        # type: (list[Entity]) -> None
         self.__entities = data
 
     @property
@@ -150,157 +173,6 @@ class EntityQueryOptions(EntityFilter):
         """
         In conjunction with location, specified a cuboid volume of entities to include.
         """
-
-    def selfCheck(self):
-        # type: () -> bool
-        """检查数据是否合法"""
-        if type(self.data) == dict:
-            if self.farthest >= 0 and self.closest >= 0:
-                return False
-            for key in self.data:
-                if key in ["closest", "farthest", "maxDistance", "minDistance"] and not (
-                        type(self.data[key]) == int and self.data[key] >= 0):
-                    return False
-            return True
-        print("Invalid value! Check your data: \n%s" % self.data)
-        return False
-
-    def checkLocation(self, entityIds):
-        # type: (list[str]) -> list[str]
-        """检查实体是否在指定范围内"""
-        if self.minDistance < 0 and self.maxDistance < 0:
-            return entityIds
-        checkOuts = []
-        for entityId in entityIds:
-            location = comp.CreatePos(entityId).GetPos()
-            if self.minDistance <= math.sqrt(
-                    math.pow(location[0] - self.location.x, 2) + math.pow(location[1] - self.location.y, 2) + math.pow(
-                            location[2] - self.location.z, 2)) <= self.maxDistance:
-                checkOuts.append(entityId)
-        return checkOuts
-
-    def checkDistance(self, entityIds):
-        # type: (list[str]) -> list[str]
-        """检查实体距离"""
-        if self.closest < 0 and self.farthest < 0:
-            return entityIds
-        checkOuts = []
-        num = self.closest if self.closest >= 0 else self.farthest
-        op = max if num == self.farthest else min
-        distances = []
-        for entityId in entityIds:
-            location = comp.CreatePos(entityId).GetPos()
-            distances.append(math.sqrt(
-                math.pow(location[0] - self.location.x, 2) + math.pow(location[1] - self.location.y, 2) + math.pow(
-                    location[2] - self.location.z, 2)))
-        for i in range(0, num):
-            checkOuts.append(entityIds[distances.index(op(distances))])
-        return list(set(checkOuts))
-
-    def checkVolume(self, entityIds):
-        # type: (list[str]) -> list[str]
-        """
-        检查实体位置是否在范围内
-        """
-        checkOuts = []
-        if not self.volume:
-            return entityIds
-        x = (self.location.x, self.location.x + self.volume.x)
-        y = (self.location.y, self.location.y + self.volume.y)
-        z = (self.location.z, self.location.z + self.volume.z)
-        for entityId in entityIds:
-            location = comp.CreatePos(entityId).GetPos()
-            if min(x) <= location[0] <= max(x) and min(y) <= location[1] <= max(y) and min(z) <= location[2] <= max(z):
-                checkOuts.append(entityId)
-        return checkOuts
-    
-    def checkProperties(self, entityIds):
-        # type: (list[str]) -> list[str]
-        checkOuts = list(set(entityIds))
-        for entityId in entityIds:
-            # types
-            entityType = comp.CreateEngineType(entityId).GetEngineTypeStr()
-            if not ((not self.type or entityType == self.type) and entityType not in self.excludeTypes):
-                checkOuts.remove(entityId)
-            # families
-            families = comp.CreateAttr(entityId).GetTypeFamily()
-            if self.families:
-                temp = 1
-                for family in self.families:
-                    if family not in families or family in self.excludeFamilies:
-                        temp = 0
-                        break
-                if not temp:
-                    checkOuts.remove(entityId)
-            # gameModes
-            if self.gameMode:
-                if entityType == "minecraft:player":
-                    gameMode = comp.CreateGame(serverApi.GetLevelId()).GetPlayerGameType(entityId)
-                    if not (gameMode == self.gameMode and gameMode not in self.excludeGameModes):
-                        checkOuts.remove(entityId)
-                else:
-                    checkOuts.remove(entityId)
-            # names
-            name = comp.CreateName(entityId).GetName()
-            if not((not self.name or name == self.name) and name not in self.excludeNames):
-                checkOuts.remove(entityId)
-            # tags
-            tags = comp.CreateTag(entityId).GetEntityTags()
-            if self.tags:
-                temp = 1
-                for tag in self.tags:
-                    if tag not in tags or tag in self.excludeTags:
-                        temp = 0
-                        break
-                if not temp:
-                    checkOuts.remove(entityId)
-            # level
-            if self.minLevel is not None or self.maxLevel is not None:
-                if entityType == "minecraft:player":
-                    level = comp.CreateLv(entityId).GetPlayerLevel()
-                    minLevel = self.minLevel if self.minLevel is not None else 0
-                    maxLevel = self.maxLevel if self.maxLevel is not None else 2147483647
-                    if not (minLevel <= level <= maxLevel):
-                        checkOuts.remove(entityId)
-                else:
-                    checkOuts.remove(entityId)
-            # direction
-            rot = comp.CreateRot(entityId).GetRot()
-            if self.minHorizontalRotation is not None or self.maxHorizontalRotation is not None:
-                minH = self.minHorizontalRotation if self.minHorizontalRotation is not None else 0
-                maxH = self.maxHorizontalRotation if self.maxHorizontalRotation is not None else 360
-                if not (minH <= rot[0] <= maxH):
-                    checkOuts.remove(entityId)
-            if self.minVerticalRotation is not None or self.maxVerticalRotation is not None:
-                minV = self.minVerticalRotation if self.minVerticalRotation is not None else 0
-                maxV = self.maxVerticalRotation if self.maxVerticalRotation is not None else 360
-                if not (minV <= rot[1] <= maxV):
-                    checkOuts.remove(entityId)
-            # property
-            if self.propertyOptions:
-                for propertyOption in self.propertyOptions:
-                    pass
-            # score
-            if self.scoreOptions:
-                for scoreOption in self.scoreOptions:
-                    scoreboard = systems.world.scoreboard.getObjective(scoreOption.objective)
-                    if not scoreboard:
-                        continue
-                    score = scoreboard.getScore(systems.world.getEntity(entityId))
-                    if scoreOption.exclude:
-                        if scoreOption.minScore <= score <= scoreOption.maxScore:
-                            checkOuts.remove(entityId)
-                    else:
-                        if not (scoreOption.minScore <= score <= scoreOption.maxScore):
-                            checkOuts.remove(entityId)
-            return checkOuts
-
-    def check(self, entityIds):
-        entityIds = self.checkProperties(entityIds)
-        entityIds = self.checkVolume(entityIds)
-        entityIds = self.checkLocation(entityIds)
-        entityIds = self.checkDistance(entityIds)
-        return list(set(entityIds))
 
 
 class EntityEffectOptions(object):

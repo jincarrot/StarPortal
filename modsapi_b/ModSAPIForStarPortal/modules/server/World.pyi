@@ -16,6 +16,10 @@ comp = serverApi.GetEngineCompFactory()
 class World(ServerSystem):
 
     @property
+    def levelId(self) -> str:
+        """Runtime identifier of the current level."""
+
+    @property
     def afterEvents(self) -> WorldAfterEvents:
         """
         Contains a set of events that are applicable to the entirety of the world.
@@ -30,6 +34,10 @@ class World(ServerSystem):
         Event callbacks are called immediately.
         Event callbacks are executed in read-only mode.
         """
+
+    @property
+    def levelId(self) -> str:
+        """Runtime identifier of the current level."""
 
     @property
     def gameRules(self) -> GameRules:
@@ -120,14 +128,6 @@ class World(ServerSystem):
     def setAbsoluteTime(absoluteTime: int):
         """Sets the world time."""
 
-    def __stopMusic(self):
-        """Stops any music tracks from playing."""
-        self.BroadcastToAllClient("setMusicState", {"state": False})
-
     def sendMessage(self, message: str):
         """Sends a message to all players."""
-
-    @staticmethod
-    def getLootTableManager():
-        """Returns a manager capable of generating loot from an assortment of sources."""
     

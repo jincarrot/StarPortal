@@ -13,4 +13,20 @@ class SystemAfterEvents(object):
         """Fires when a script event is received. This includes events sent by both the client and the server."""
     
     @property
-    def clientEventRecieve(self) -> ClientEventReceiveAfterEventSignal: ...
+    def clientEventReceive(self) -> ClientEventReceiveAfterEventSignal: ...
+
+    @property
+    def clientRequestData(self) -> ClientRequestDataAfterEventSignal: ...
+
+class SystemBeforeEvents:
+    """
+    A set of events that fire before an actual action occurs. 
+    
+    In most cases, you can potentially cancel or modify the impending event. 
+    
+    Note that in before events any APIs that modify gameplay state will not function and will throw an error.
+    """
+
+    @property
+    def startup(self) -> StartupBeforeEventSignal:
+        """"""

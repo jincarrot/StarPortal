@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
+from copy import deepcopy
+
 from mod.common.minecraftEnum import EntityComponentType, RayFilterType
+
+from ...utils.entity import queryEntities
 from ...utils.system import systems
 from Effect import *
 from ...interfaces.BlockOptions import *
@@ -375,7 +379,7 @@ class Entity(object):
         Returns a property value.
         """
         DataComp = SComp.CreateExtraData(self.__id)
-        return DataComp.GetExtraData(identifier) if identifier in self.getDynamicPropertyIds() else None
+        return deepcopy(DataComp.GetExtraData(identifier)) if identifier in self.getDynamicPropertyIds() else None
 
     def getDynamicPropertyIds(self):
         """
@@ -490,7 +494,10 @@ class Entity(object):
         Gets an entity Property value.
         If the property was set using the setProperty function within the same tick, the updated value will not be reflected until the subsequent tick.
         """
-        return SComp.CreateQueryVariable(self.__id).EvalMolangExpression("q.property('%s')" % identifier)['value']
+        comp = SComp.CreateQueryVariable(self.__id)
+        if identifier in (comp.GetAllProperties() or ()):
+            return comp.EvalMolangExpression("q.property('%s')" % identifier)['value']
+        return None
 
     def getViewDirection(self):
         """
@@ -551,16 +558,13 @@ class Entity(object):
         """
         return SComp.CreateGame(serverApi.GetLevelId()).KillEntity(self.__id)
 
-    def matches(self, options=None):
+    def matches(self, options={}):
         """
         Matches the entity against the passed in options.
         Uses the location of the entity for matching if the location is not specified in the passed in EntityQueryOptions.
         """
-        options = EntityQueryOptions(options if type(options) == dict else {}) if type(options) != EntityQueryOptions else options
-        if options.selfCheck():
-            if len(options.check([self.__id])):
-                return True
-        return False
+        entities = queryEntities(options)
+        return self in entities
 
     def playAnimation(self, animationName, options={}):
         """
@@ -623,7 +627,7 @@ class Entity(object):
         """
         temp = SComp.CreateCommand(serverApi.GetLevelId()).SetCommand(commandString, self.id)
         if not temp:
-            raise Exception("Command execution failed! Command: %s" % commandString)
+            return 
         params = commandString.split(" ")
         detectCommand = ""
         selector = ""
@@ -656,7 +660,7 @@ class Entity(object):
         Sets a specified property to a value.
         """
         DataComp = SComp.CreateExtraData(self.__id)
-        DataComp.SetExtraData(identifier, value)
+        DataComp.SetExtraData(identifier, deepcopy(value))
         DataComp.SaveExtraData()
 
     def setOnFire(self, seconds, useEffects=True):
@@ -671,7 +675,9 @@ class Entity(object):
         Sets an Entity Property to the provided value.
         This property change is not applied until the next tick.
         """
-        SComp.CreateQueryVariable(self.__id).SetPropertyValue(identifier, value)
+        comp = SComp.CreateQueryVariable(self.__id)
+        if identifier in (comp.GetAllProperties() or ()):
+            comp.SetPropertyValue(identifier, value)
 
     def setRotation(self, rotation):
         """

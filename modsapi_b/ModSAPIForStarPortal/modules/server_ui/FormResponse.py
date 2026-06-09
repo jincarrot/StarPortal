@@ -18,15 +18,6 @@ class FormResponse(object):
         """If true, the form was canceled by the player (e.g., they selected the pop-up X close button)."""
         return self._canceled
 
-class Promise(object):
-    """Promise"""
-
-    def __init__(self, id):
-        self.__id = id
-
-    def then(self, callback):
-        serverApi.GetSystem("SAPI", "Base").setFormCallback(self.__id, callback)
-
 class ActionFormResponse(FormResponse):
     """Returns data about the player results from a modal action form."""
 

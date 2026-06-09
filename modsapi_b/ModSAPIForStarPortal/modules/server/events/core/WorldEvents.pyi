@@ -1,4 +1,5 @@
 # coding=utf-8
+from ...registries.customCommand import CustomCommandRegistry
 from ...Entity import *
 from ...Player import *
 from .....interfaces.Sources import *
@@ -74,6 +75,20 @@ class ClientEventReceiveAfterEvent:
     def data(self):
         """data"""
 
+class ClientRequestDataAfterEvent:
+    """
+    Returns additional data about a /scriptevent command invocation.
+    """
+
+    @property
+    def id(self):
+        # type: () -> str
+        """Identifier of this ScriptEvent command message."""
+    
+    @property
+    def data(self):
+        """data"""
+
 class ExplosionBeforeEvent(object):
     """
     Contains information regarding an explosion that has happened.
@@ -95,4 +110,7 @@ class ExplosionBeforeEvent(object):
         # type: () -> list[Block]
         """A collection of blocks impacted by this explosion event."""
 
-    
+class StartupBeforeEvent:
+
+    @property
+    def customCommandRegistry(self) -> CustomCommandRegistry:...

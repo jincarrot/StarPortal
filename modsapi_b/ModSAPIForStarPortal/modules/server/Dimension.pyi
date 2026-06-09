@@ -135,8 +135,8 @@ class Dimension(object):
         # type: (Vector3, float, ExplosionOptions) -> bool
         """Creates an explosion at the specified location."""
 
-    def fillBlocks(self, volume, block, options):
-        # type: (BlockVolume, BlockPermutation | str, 0) -> 0 
+    def fillBlocks(self, volume, block, options={}):
+        # type: (BlockVolume, BlockPermutation | str, dict) -> None
         """Fills an area of blocks with a specific block type."""
 
     def setBlockType(self, location, blockType):

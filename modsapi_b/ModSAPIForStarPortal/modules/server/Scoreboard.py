@@ -119,19 +119,19 @@ class ScoreboardObjective(object):
         if isinstance(participate, str):
             scores = systems.world.getDynamicProperty("scoreboard.%s" % self.__id)
             if not scores:
-                return 0
-            return scores.get(participate, 0)
+                return None
+            return scores.get(participate, None)
         else:
             for playerScore in playerScores:
                 if playerScore['playerId'] == participate.id:
                     for score in playerScore['scoreList']:
                         if score['name'] == self.__id:
                             return score['value']
-                    return 0
+                    return None
             scores = systems.world.getDynamicProperty("scoreboard.%s" % self.__id)
             if not scores:
-                return 0
-            return scores.get(participate.id, 0)
+                return None
+            return scores.get(participate.id, None)
     
     def getScores(self):
         # type: () -> list[ScoreboardScoreInfo]

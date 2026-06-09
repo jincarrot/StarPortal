@@ -1,0 +1,11 @@
+# -*- coding: utf-8 -*-
+NAMESPACE = "ESpirit"
+"""命名空间"""
+SYSTEM_NAME_SERVER = "StarPortalServer"
+"""服务端系统名"""
+SYSTEM_NAME_CLIENT = "StarPortalClient"
+"""客户端系统名"""
+ENTRY_PATH_SERVER = "server"
+"""服务端入口文件"""
+ENTRY_PATH_CLIENT = "client"
+"""客户端入口文件"""

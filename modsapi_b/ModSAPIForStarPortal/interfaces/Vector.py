@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 # from typing import List, Dict, Union
-
-import mod.server.extraServerApi as serverApi
 import math
-comp = serverApi.GetEngineCompFactory()
-
 
 class Vector3(object):
 
@@ -82,6 +78,12 @@ class Vector3(object):
     
     def getIntTuple(self):
         return (int(math.floor(self.x)), int(math.floor(self.y)), int(math.floor(self.z)))
+    
+    @property
+    def distance(self):
+        # type: () -> float
+        """Gets the distance between the vector and the origin."""
+        return math.sqrt(self.x ** 2 + self.y ** 2 + self.z ** 2)
 
 
 class Vector2(object):

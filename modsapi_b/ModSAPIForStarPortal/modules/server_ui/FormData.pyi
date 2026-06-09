@@ -1,9 +1,57 @@
 # -*- coding: utf-8 -*-
 from typing import Callable, TypeVar, Generic, TypedDict, overload
 from server.Player import Player
+from .FormResponse import ActionFormResponse, ModalFormResponse
+from ...utils.promise import Promise
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+class ActionFormData(object):
+    """Builds a simple player form with buttons that let the player take action."""
+
+    def title(self, titleText):
+        # type: (str) -> ActionFormData
+        """This builder method sets the title for the modal dialog."""
+    
+    def body(self, bodyText):
+        # type: (str) -> ActionFormData
+        """Method that sets the body text for the modal form."""
+    
+    def button(self, text, icon=None):
+        # type: (str, str) -> None
+        """Adds a button to this form with an icon from a resource pack."""
+    
+    def show(self, player: Player) -> Promise[ActionFormResponse]:
+        """Creates and shows this modal popup form. Returns asynchronously when the player confirms or cancels the dialog."""
+
+class ModalFormData(object):
+    """Used to create a fully customizable pop-up form for a player."""
+    def title(self, titleText):
+        # type: (str) -> ModalFormData
+        """This builder method sets the title for the modal dialog."""
+    
+    def toggle(self, label, defaultValue=False):
+        # type: (str, bool) -> ModalFormData
+        """Adds a toggle checkbox button to the form."""
+
+    def dropdown(self, label, items, dropdownOptions={"defaultValueIndex": 0}):
+        # type: (str, list[str], dict) -> ModalFormData
+        """The default selected item index. It will be zero in case of not setting this value."""
+    
+    def textField(self, label, placeholderText, defaultValue=""):
+        # type: (str, str, str) -> ModalFormData
+        """Adds a textbox to the form."""
+    
+    def slider(self, label, mininumValue, maxinumValue, valueStep, defaultValue=0):
+        # type: (str, int, int, int, int) -> ModalFormData
+        """Adds a numeric slider to the form."""
+    
+    def show(self, player: Player) -> Promise[ModalFormResponse]:
+        """Creates and shows this modal popup form. Returns asynchronously when the player confirms or cancels the dialog."""
+        """id = random.randint(0, 32767)
+        systems.system.sendToClient(player.id, "showModalForm", {"formId": id, "title": self.__title, "elements": self.__elements})
+        return self.fr.Promise(id)"""
 
 class ObservableOptions(TypedDict):
     clientWritable: bool | Observable[bool]
@@ -52,9 +100,13 @@ class Observable(Generic[T]):
 class Options(TypedDict):
     visible: bool | Observable[bool]
 
-class ButtonOptions(Options): ...
+class ButtonOptions(Options): 
+    icon: str | Observable[str]
+    """Icon of this button. Set to a empty string to hide this icon."""
 
 class DividerOptions(Options): ...
+
+class SpacerOptions(Options): ...
 
 class LabelOptions(Options): ...
 
@@ -65,6 +117,8 @@ class TextFieldOptions(Options): ...
 class ToggleOptions(Options): ...
 
 class DropdownOptions(Options): ...
+
+class ControlGroupOptions(Options): ...
 
 class DropdownItem(TypedDict): 
     label: str
@@ -169,7 +223,7 @@ class CustomForm(DynamicForm):
         返回自身
         """
 
-    def spacer(self, options: Options=...) -> CustomForm: 
+    def spacer(self, options: SpacerOptions=...) -> CustomForm: 
         """
         添加一段空白（效果同添加空白文本）
 
@@ -201,6 +255,17 @@ class CustomForm(DynamicForm):
         
         --options? - 开关选项
         
+        返回自身
+        """
+        
+    def controlGroup(self, customControlGroup: CustomControlGroup | str, options: ControlGroupOptions=...) -> CustomForm: 
+        """
+        添加一个自定义控件组。
+        
+        --customControlGroup - 自定义控件组对象或预设的自定义控件组名称（预设的自定义控件组可以在CustomControlGroups中找到）
+
+        --options? - 选项
+
         返回自身
         """
         
@@ -371,3 +436,52 @@ class MoreUI:
         """
         向玩家发送表单。
         """
+
+class CustomControlGroup:
+    """
+    Defines a group of controls and can be added to a form.
+    """
+
+    @property
+    def id(self):
+        """Identifier of this control group."""
+
+    def button(self, label, onClick, options={"visible": True, "icon": ""}):
+        # type: (str | Observable, Callable[[], None], ButtonOptions) -> CustomForm
+        """Adds a button to this control group."""
+
+    def divider(self, options={"visible": True}):
+        # type: (DividerOptions) -> CustomForm
+        """Adds a divider to this control group."""
+
+    def dropdown(self, label, value, items, options={"visible": True}):
+        # type: (str | Observable, Observable, list, DropdownOptions) -> CustomForm
+        """Adds a dropdown to this control group."""
+
+    def label(self, text, options={"visible": True}):
+        # type: (str | Observable, LabelOptions) -> CustomForm
+        """Adds a label to this control group."""
+
+    def slider(self, label, value, minValue, maxValue, options={"visible": True}):
+        # type: (str | Observable, Observable, int | Observable, int | Observable, SliderOptions) -> CustomForm
+        """Adds a slider to this control group."""
+
+    def spacer(self, options={"visible": True}):
+        # type: (SpacerOptions) -> CustomForm
+        """Adds a spacer to this control group."""
+
+    def textField(self, label, text, options={"visible": True}):
+        # type: (str | Observable, Observable, TextFieldOptions) -> CustomForm
+        """Adds a text field to this control group."""
+
+    def toggle(self, label, toggled, options={"visible": True}):
+        # type: (str | Observable, Observable, ToggleOptions) -> CustomForm
+        """Adds a toggle to this control group."""
+
+    @staticmethod
+    def create(identifier, player=None):
+        # type: (str, Player | None) -> CustomControlGroup
+        """
+        Create a custom control group.
+        """
+    

@@ -152,6 +152,20 @@ class Player(Entity):
         # world.NotifyToClient(self.id, "popScreen", {})
         pass
 
+    def getGameMode(self):
+        """Retrieves the active gamemode for this player, if specified."""
+        gameType = SComp.CreateGame(self.__id).GetPlayerGameType()
+        if gameType == 0:
+            return GameMode.Survival
+        elif gameType == 1:
+            return GameMode.Creative
+        elif gameType == 2:
+            return GameMode.Adventure
+        elif gameType == 6:
+            return GameMode.Spectator
+        else:
+            return GameMode.Survival
+
     def teleport(self, location, teleportOptions = {}):
         location = Vector3(location) 
         teleportOptions = TeleportOptions(teleportOptions if type(teleportOptions) == dict else {}) if type(teleportOptions) != TeleportOptions else teleportOptions

@@ -18,6 +18,7 @@ class SystemAfterEvents(object):
     def __init__(self):
         self.__scriptEventReceive = ScriptEventCommandMessageAfterEventSignal()
         self.__clientEventReceive = ClientEventReceiveAfterEventSignal()
+        self.__clientRequestData = ClientRequestDataAfterEventSignal()
 
     @property
     def scriptEventReceive(self):
@@ -25,5 +26,25 @@ class SystemAfterEvents(object):
         return self.__scriptEventReceive
     
     @property
-    def clientEventRecieve(self):
+    def clientEventReceive(self):
         return self.__clientEventReceive
+    
+    @property
+    def clientRequestData(self):
+        return ClientRequestDataAfterEventSignal()
+
+class SystemBeforeEvents:
+    """
+    A set of events that fire before an actual action occurs. 
+    
+    In most cases, you can potentially cancel or modify the impending event. 
+    
+    Note that in before events any APIs that modify gameplay state will not function and will throw an error.
+    """
+
+    def __init__(self):
+        self.__startup = StartupBeforeEventSignal()
+
+    @property
+    def startup(self):
+        return self.__startup

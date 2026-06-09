@@ -1,14 +1,29 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
-
-import mod.server.extraServerApi as serverApi
-import random
 import types
 from ...utils.system import systems
+from ...config import Namespace
+from ...utils.promise import Promise
 
 Observables = []
 CustomForms = {} # type: dict[int, dict[str, list]]
+CustomControlGroups = {} # type: dict[str, CustomControlGroup]
 
+def isRunningInServer():
+    """Check if this code is running in server environment."""
+    try:
+        import mod.client.extraClientApi as clientApi
+        return clientApi.GetLocalPlayerId() == "-1"
+    except:
+        return True
+
+def onClickFormBtn(promise, argType, btnId, data=None):
+    result = []
+    if data:
+        for d in data:
+            result.append(d.getData())
+    promise._run(argType({"buttonId": btnId, "canceled": btnId == -1, "data": result}))
+    
 class ActionFormData(object):
     """Builds a simple player form with buttons that let the player take action."""
     import FormResponse as fr
@@ -38,9 +53,17 @@ class ActionFormData(object):
     
     def show(self, player):
         """Creates and shows this modal popup form. Returns asynchronously when the player confirms or cancels the dialog."""
-        id = random.randint(0, 32767)
-        systems.system.sendToClient(player.id, "showActionForm", {"formId": id, "title": self.__title, "body": self.__body, "button": self.__button})
-        return self.fr.Promise(id)
+        promise = Promise(self.fr.ActionFormResponse)
+        form = CustomForm.create(player, self.__title)
+        form.label()
+        form.label(self.__body)
+        index = 0
+        for button in self.__button:
+            form.button(button[0], lambda idx=index: (form.close(), onClickFormBtn(promise, self.fr.ActionFormResponse, idx)), {"icon": button[1]})
+            index += 1
+        systems.system.afterEvents.clientEventReceive.subscribe("closeCustomForm%s" % form.formId, lambda a: onClickFormBtn(promise, self.fr.ActionFormResponse, -1))
+        form.show()
+        return promise
 
 class ModalFormData(object):
     """Used to create a fully customizable pop-up form for a player."""
@@ -61,15 +84,10 @@ class ModalFormData(object):
         """Adds a toggle checkbox button to the form."""
         data = {
             "type": "toggle",
-            "label": label
+            "label": label,
+            "defaultValue": defaultValue
         }
         self.__elements.append(data)
-        return self
-    
-    def title(self, titleText):
-        # type: (str) -> None
-        """This builder method sets the title for the modal dialog."""
-        self.__title = titleText
         return self
     
     def textField(self, label, placeholderText, defaultValue=""):
@@ -77,7 +95,9 @@ class ModalFormData(object):
         """Adds a textbox to the form."""
         data = {
             "type": "input",
-            "label": label
+            "label": label,
+            "placeholder": placeholderText,
+            "defaultValue": defaultValue
         }
         self.__elements.append(data)
         return self
@@ -87,16 +107,58 @@ class ModalFormData(object):
         """Adds a numeric slider to the form."""
         data = {
             "type": "step_slider",
-            "label": label
+            "label": label,
+            "mininumValue": mininumValue,
+            "maxinumValue": maxinumValue,
+            "valueStep": valueStep,
+            "defaultValue": defaultValue
         }
         self.__elements.append(data)
         return self
     
+    def dropdown(self, label, items, dropdownOptions={"defaultValueIndex": 0}):
+        # type: (str, list[str], dict) -> ModalFormData
+        """The default selected item index. It will be zero in case of not setting this value."""
+        data = {
+            "type": "dropdown",
+            "label": label,
+            "items": items,
+            "defaultValueIndex": dropdownOptions.get("defaultValueIndex", 0)
+        }
+        self.__elements.append(data)
+        return self
+
     def show(self, player):
         """Creates and shows this modal popup form. Returns asynchronously when the player confirms or cancels the dialog."""
-        id = random.randint(0, 32767)
-        systems.system.sendToClient(player.id, "showModalForm", {"formId": id, "title": self.__title, "elements": self.__elements})
-        return self.fr.Promise(id)
+        promise = Promise(self.fr.ModalFormResponse)
+        form = CustomForm.create(player, self.__title)
+        values = []
+        for el in self.__elements:
+            if el['type'] == 'toggle':
+                obs = Observable.create(el.get('defaultValue', False), {"clientWritable": True})
+                form.toggle(el['label'], obs)
+            elif el['type'] == 'input':
+                obs = Observable.create(el.get('defaultValue', ""), {"clientWritable": True})
+                form.textField(el['label'], obs)
+            elif el['type'] == 'step_slider':
+                obs = Observable.create(el.get('defaultValue', 0), {"clientWritable": True})
+                form.slider(el['label'], obs, el.get('mininumValue', 0), el.get('maxinumValue', 1))
+            elif el['type'] == 'dropdown':
+                items = []
+                index = 0
+                for item in el['items']:
+                    items.append({
+                        "value": index,
+                        "label": item
+                    })
+                    index += 1
+                obs = Observable.create(el.get('defaultValueIndex', 0), {"clientWritable": True})
+                form.dropdown(el['label'], obs, items)
+            values.append(obs)
+        form.button("提交", lambda: (form.close(), onClickFormBtn(promise, self.fr.ActionFormResponse, 0, values)))
+        systems.system.afterEvents.clientEventReceive.subscribe("closeCustomForm%s" % form.formId, lambda a: onClickFormBtn(promise, self.fr.ActionFormResponse, -1, None))
+        form.show()
+        return promise
 
 def checkType(var, type, T=None):
     """Check type."""
@@ -127,7 +189,7 @@ class Observable:
             Observable.ID += 1
 
             if options['clientWritable']:
-                systems.system.afterEvents.clientEventRecieve.subscribe("updateObservable%s" % self._id, self._update)
+                systems.system.afterEvents.clientEventReceive.subscribe("updateObservable%s" % self._id, self._update)
         else:
             raise TypeError("Create observable failed! Expected type int | float | str | bool, but got %s" % (type(self.__data).__name__))
 
@@ -186,14 +248,24 @@ class Observable:
 def updateForm(form, mode="update", options={}):
     # type: (CustomForm, str, dict) -> None
     if mode == 'sendMore':
-        systems.system.sendToClient(
-            form.id, 
-            "%sCustomForm" % mode, 
-            {
-                "row": options['row'],
-                "column": options['column']
-            }
-        )
+        if isRunningInServer():
+            systems.system.sendToClient(
+                form.id, 
+                "%sCustomForm" % mode, 
+                {
+                    "row": options['row'],
+                    "column": options['column']
+                }
+            )
+        else:
+            class Temp:
+                def __init__(self, data):
+                    self.data = data
+            import mod.client.extraClientApi as clientApi
+            clientApi.GetSystem(Namespace, "client_core").sendMoreCustomForm(Temp({
+                    "row": options['row'],
+                    "column": options['column']
+                }))
         return
     data = []
     if not options:
@@ -213,6 +285,7 @@ def updateForm(form, mode="update", options={}):
         # Generate data.
         if control['type'] == 'button':
             temp["label"] = control['label'].getData() if hasattr(control['label'], "getData") else control['label']
+            temp['icon'] = control['icon'].getData() if hasattr(control['icon'], "getData") else control['icon']
         elif control['type'] == 'label':
             temp["text"] = control['text'].getData() if hasattr(control['text'], "getData") else control['text']
         elif control['type'] == 'textField':
@@ -241,7 +314,8 @@ def updateForm(form, mode="update", options={}):
 
         temp['visible'] = control['visible'].getData() if hasattr(control['visible'], "getData") else control['visible']
         data.append(temp)
-    systems.system.sendToClient(
+    if isRunningInServer():
+        systems.system.sendToClient(
             form._player.id, 
             "%sCustomForm" % mode, 
             {
@@ -251,6 +325,17 @@ def updateForm(form, mode="update", options={}):
                 "options": options
             }
         )
+    else:
+        class Temp:
+                def __init__(self, data):
+                    self.data = data
+        import mod.client.extraClientApi as clientApi
+        getattr(clientApi.GetSystem(Namespace, "client_core"), "%sCustomForm" % mode)(Temp({
+            "formId": form._formId,
+            "title": form._title.getData() if hasattr(form._title, "getData") else form._title,
+            "data": data,
+            "options": options
+        }))
 
 class DynamicForm:
     """Base class of dynamic forms (CustomForm, MessageForm)."""
@@ -266,7 +351,7 @@ class CustomForm(DynamicForm):
     def __init__(self, player, title, options):
         # Type checking.
         from ..server.Player import Player
-        if not isinstance(player, Player):
+        if not isinstance(player, Player) and isRunningInServer():
             raise Exception("Create custom form failed! arg 0 excepted type Player")
         if not type(title.getData() if hasattr(title, "getData") else title) == str:
             raise Exception(
@@ -291,7 +376,14 @@ class CustomForm(DynamicForm):
             if "closable" not in options:
                 options['closable'] = True
         # Set data.
-        self._player = player
+        if isRunningInServer():
+            self._player = player
+        else:
+            class Temp:
+                def __init__(self, id):
+                    self.id = id
+            import mod.client.extraClientApi as clientApi
+            self._player = Temp(clientApi.GetLocalPlayerId())
         self._title = title
         self._data = []
         self._options = options
@@ -309,7 +401,7 @@ class CustomForm(DynamicForm):
             CustomForms[self._formId]['obs'].append(options['movable']._id)
         if hasattr(options['closable'], "getData"):
             CustomForms[self._formId]['obs'].append(options['closable']._id)
-        systems.system.afterEvents.clientEventRecieve.subscribe("updateForm%s" % self._formId, self._update)
+        systems.system.afterEvents.clientEventReceive.subscribe("updateForm%s" % self._formId, self._update)
 
     @property
     def formId(self):
@@ -332,7 +424,7 @@ class CustomForm(DynamicForm):
                 selected['callback']()
                 updateForm(self)
 
-    def button(self, label, onClick, options={"visible": True}):
+    def button(self, label, onClick, options={"visible": True, "icon": ""}):
         # type: (str | Observable, types.FunctionType, dict) -> CustomForm
         # Type checking.
         label_value = label.getData() if hasattr(label, "getData") else label
@@ -351,28 +443,40 @@ class CustomForm(DynamicForm):
         else:
             if "visible" not in options:
                 options['visible'] = True
+            if "icon" not in options:
+                options['icon'] = ""
         # Data store.
         self._data.append(
             {
                 "type": "button",
                 "label": label,
                 "callback": onClick,
-                "visible": options['visible']
+                "visible": options['visible'],
+                "icon": options['icon']
             }
         )
         if isinstance(label, Observable):
             CustomForms[self._formId]['obs'].append(label._id)
         if isinstance(options['visible'], Observable):
             CustomForms[self._formId]['obs'].append(options['visible']._id)
+        if isinstance(options['icon'], Observable):
+            CustomForms[self._formId]['obs'].append(options['icon']._id)
         updateForm(self)
         return self
     
     def close(self):
-        systems.system.sendToClient(
-            self._player.id, 
-            "closeCustomForm", 
-            {"formId": self._formId}
-        )
+        if isRunningInServer():
+            systems.system.sendToClient(
+                self._player.id, 
+                "closeCustomForm", 
+                {"formId": self._formId}
+            )
+        else:
+            class Temp:
+                def __init__(self, data):
+                    self.data = data
+            import mod.client.extraClientApi as clientApi
+            clientApi.GetSystem(Namespace, "client_core").closeCustomForm(Temp({"formId": self._formId}))
         return self
 
     def divider(self, options={"visible": True}):
@@ -659,6 +763,54 @@ class CustomForm(DynamicForm):
         updateForm(self)
         return self
         
+    def controlGroup(self, customControlGroup, options={"visible": True}):
+        # type: (CustomControlGroup | str, dict) -> CustomForm
+        # Type checking.
+        if not isinstance(customControlGroup, (CustomControlGroup, str)):
+            raise Exception(
+                "CustomForm create custom control failed! arg 0 expected type CustomControlGroup | str, but got %s" % type(customControlGroup).__name__
+            )
+        if not isinstance(options, dict):
+            raise Exception(
+                "CustomForm create custom control failed! arg 1 expected type dict, but got %s" % type(options).__name__
+            )
+        if isinstance(customControlGroup, str):
+            customControlGroup = CustomControlGroups.get("%s:%s" % (customControlGroup, self._player.id), None)
+            if not customControlGroup:
+                customControlGroup = CustomControlGroups.get(customControlGroup, None)
+            if not customControlGroup:
+                raise Exception("CustomForm create custom control failed! No custom control group named %s found." % customControlGroup)
+        if customControlGroup.player:
+            if customControlGroup.player.id != self._player.id:
+                raise Exception("CustomForm create custom control failed! Custom control group '%s' belongs to another player." % customControlGroup.id)
+        v1 = options.get('visible', True)
+        for control in customControlGroup.data:
+            v2 = control['options'].get('visible', True)
+            visible = Observable.create((v1.getData() if isinstance(v1, Observable) else v1) and (v2.getData() if isinstance(v2, Observable) else v2))
+            def onVisibleChange(new, v1=v1, v2=v2, visible=visible):
+                visible.setData((v1.getData() if isinstance(v1, Observable) else v1) and (v2.getData() if isinstance(v2, Observable) else v2))
+            if isinstance(v1, Observable):
+                v1.subscribe(onVisibleChange)
+            if isinstance(v2, Observable):
+                v2.subscribe(onVisibleChange)
+            if control['type'] == 'button':
+                self.button(control['label'], control['onClick'], {"visible": visible, "icon": control['options'].get('icon', "")})
+            elif control['type'] == 'label':
+                self.label(control['text'], {"visible": visible})
+            elif control['type'] == 'textField':
+                self.textField(control['label'], control['text'], {"visible": visible})
+            elif control['type'] == 'toggle':
+                self.toggle(control['label'], control['toggled'], {"visible": visible})
+            elif control['type'] == 'slider':
+                self.slider(control['label'], control['value'], control['minValue'], control['maxValue'], {"visible": visible})
+            elif control['type'] == 'dropdown':
+                self.dropdown(control['label'], control['value'], control['items'], {"visible": visible})
+            elif control['type'] == 'divider':
+                self.divider({"visible": visible})
+            elif control['type'] == 'spacer':
+                self.spacer({"visible": visible})
+        return self
+    
     @staticmethod
     def create(player, title, options={"resizable": False, "movable": False, "style": "oreui", "closable": True}):
         return CustomForm(player, title, options)
@@ -881,9 +1033,116 @@ class MoreUI:
             updateForm(formData.form, "combine")
 
     def close(self):
-        systems.system.sendToClient(
-            self.__player.id, 
-            "closeMoreUI", 
-            {"formId": self.__id}
-        )
+        if isRunningInServer():
+            systems.system.sendToClient(
+                    self.__player.id, 
+                    "closeMoreUI", 
+                    {"formId": self.__id}
+                )
+        else:
+            class Temp:
+                def __init__(self, data):
+                    self.data = data
+            import mod.client.extraClientApi as clientApi
+            clientApi.GetSystem(Namespace, "client_core").closeMoreUI(Temp({"formId": self.__id}))
         return self
+
+
+class CustomControlGroup:
+    """
+    Defines a group of controls and can be added to a form.
+    """
+
+    def __init__(self, identifier, player=None):
+        self.__identifier = identifier
+        CustomControlGroups[identifier + ((":" + player.id) if player else "")] = self
+        self.__controls = []
+        self.__player = player
+
+    @property
+    def player(self):
+        return self.__player
+
+    @property
+    def id(self):
+        return self.__identifier
+    
+    @property
+    def data(self):
+        return self.__controls
+
+    def button(self, label, onClick, options={"visible": True, "icon": ""}):
+        # type: (str | Observable, types.FunctionType, dict) -> CustomForm
+        self.__controls.append({
+            "type": "button",
+            "label": label,
+            "onClick": onClick,
+            "options": options
+        })
+
+    def divider(self, options={"visible": True}):
+        # type: (dict) -> CustomForm
+        self.__controls.append({
+            "type": "divider",
+            "options": options
+        })
+
+    def dropdown(self, label, value, items, options={"visible": True}):
+        # type: (str | Observable, Observable, list, dict) -> CustomForm
+        self.__controls.append({
+            "type": "dropdown",
+            "label": label,
+            "value": value,
+            "items": items,
+            "options": options
+        })
+
+    def label(self, text, options={"visible": True}):
+        # type: (str | Observable, dict) -> CustomForm
+        self.__controls.append({
+            "type": "label",
+            "text": text,
+            "options": options
+        })
+
+    def slider(self, label, value, minValue, maxValue, options={"visible": True}):
+        # type: (str | Observable, Observable, int | Observable, int | Observable, dict) -> CustomForm
+        self.__controls.append({
+            "type": "slider",
+            "label": label,
+            "value": value,
+            "minValue": minValue,
+            "maxValue": maxValue,
+            "options": options
+        })
+
+    def spacer(self, options={"visible": True}):
+        self.__controls.append({
+            "type": "spacer",
+            "options": options
+        })
+
+    def textField(self, label, text, options={"visible": True}):
+        # type: (str | Observable, Observable, dict) -> CustomForm
+        self.__controls.append({
+            "type": "textField",
+            "label": label,
+            "text": text,
+            "options": options
+        })
+
+    def toggle(self, label, toggled, options={"visible": True}):
+        # type: (str | Observable, Observable, dict) -> CustomForm
+        self.__controls.append({
+            "type": "toggle",
+            "label": label,
+            "toggled": toggled,
+            "options": options
+        })
+
+    @staticmethod
+    def create(identifier, player=None):
+        """Create a custom control group."""
+        return CustomControlGroup(identifier, player)
+    
+    

@@ -5,6 +5,7 @@ from .....interfaces.Sources import *
 from .....enums.Events import ScriptEventSource
 from ...Block import Block
 from ...Dimension import Dimension
+from ...registries.customCommand import CustomCommandRegistry
 
 class ExplosionAfterEvent(object):
     """
@@ -116,7 +117,7 @@ class ClientEventReceiveAfterEvent:
         data = {
             "id": self.__id
         }
-        return "<ClientSendToServerAfterEvent> %s" % data
+        return "<ClientEventReceiveAfterEvent> %s" % data
     
     @property
     def id(self):
@@ -127,6 +128,35 @@ class ClientEventReceiveAfterEvent:
     @property
     def data(self):
         return self.__data
+    
+class ClientRequestDataAfterEvent:
+    """
+    Returns additional data about a /scriptevent command invocation.
+    """
+
+    def __init__(self, data):
+        self.__id = data['eventName']
+        self.__data = data['data']
+
+    def __str__(self):
+        data = {
+            "id": self.__id
+        }
+        return "<ClientRequestDataAfterEvent> %s" % data
+    
+    @property
+    def id(self):
+        # type: () -> str
+        """Identifier of this ScriptEvent command message."""
+        return self.__id
+    
+    @property
+    def data(self):
+        return self.__data
+    
+    @data.setter
+    def data(self, value):
+        self.__data = value
 
 class ExplosionBeforeEvent(object):
     """
@@ -166,4 +196,12 @@ class ExplosionBeforeEvent(object):
             lst.append(Block({"dimension": self.__dimension, "location": Vector3(block)}))
         return lst
 
+class StartupBeforeEvent:
+
+    def __init__(self):
+        self.__customCommandRegistry = CustomCommandRegistry()
+
+    @property
+    def customCommandRegistry(self):
+        return self.__customCommandRegistry
     

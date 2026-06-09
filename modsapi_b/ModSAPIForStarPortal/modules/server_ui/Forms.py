@@ -345,6 +345,8 @@ class CustomFormUI(ScreenNode):
                     control.SetVisible(False)
                 index += 1
                 continue
+            if control:
+                control.SetVisible(True)
             if controlData['type'] == 'button':
                 if control:
                     if control.asButton():
@@ -547,8 +549,6 @@ class CustomFormUI(ScreenNode):
                 control.GetChildByPath("/dropdown_box/pressed/button_label").asLabel().SetText(itemLabel)
                 if controlData['clientWritable']:
                     self.dropdowns[controlData['valueId']] = controlData['value']
-
-            control.SetVisible(True)
             index += 1
         self.content.SetFullSize("y", {"absoluteValue": height + 20})
         self.height = height + 20
@@ -671,3 +671,4 @@ class More(ScreenNode):
         for form in self.forms:
             form.update(data)
             self.updateGrid(form)
+            

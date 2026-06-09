@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import typing
-from ...architect.scheduler import Scheduler
 import mod.server.extraServerApi as serverApi
 from SystemEvents import SystemAfterEvents
 from ..server.Player import Player
+from ...utils.promise import Promise
 
 ServerSystem = serverApi.GetServerSystemCls()
 
@@ -40,14 +40,26 @@ class System(ServerSystem):
         Cancels the execution of a function run that was previously scheduled via @minecraft/server.System.run.
         """
 
-    def sendToClient(self, target: Player | str | list[Player], eventName: str, data: any):
+    def sendToClient(self, target: Player | str | list[Player], eventName: str, data: any = None):
         """Send data to client."""
 
+    def runClientFunc(self, player, funcName, *args, **kwargs):
+        """Runs a function on the client. funcName is the name of a function that was registered on the client via @minecraft/client.System.clientCallable."""
+        
     def sendToAllClients(self, eventName: str, data: any):
         """Send data to all clients."""
 
-    def runJob(self, generator):
-        """"""
-    
-    def clearJob(self, jobId):
-        """"""
+    def exportFunc(self, identifier: str, callback: typing.Callable):
+        """
+        Exports a function to be used in other systems. 
+        This is used to allow systems to call functions in other systems without needing to import them directly, which can help avoid circular dependencies.
+        """
+
+    def importFunc(self, identifier: str) -> typing.Callable | None:
+        """
+        Imports a function that was exported by another system. 
+        This is used to allow systems to call functions in other systems without needing to import them directly, which can help avoid circular dependencies.
+        """
+
+    def getDataFromClient(self, player: Player | str, dataName: str, data: typing.Any=None) -> Promise[typing.Any]:
+        pass

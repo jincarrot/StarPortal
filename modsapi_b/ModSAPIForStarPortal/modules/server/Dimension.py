@@ -8,7 +8,7 @@ from ...utils.system import systems
 from ...interfaces.WorldOptions import *
 from Command import CommandResult
 from ...utils.block import BlockPaletteData
-from MolangVariableMap import MolangVariableMap
+from ...utils.entity import queryEntities
 
 SComp = serverApi.GetEngineCompFactory()
 
@@ -55,55 +55,30 @@ class Dimension(object):
         """
         Returns a block instance at the given location.
         """
-        return self.__b.Block({"dimension": self, "location": Vector3(location) if type(location) == dict else location})
+        return self.__b.Block({"dimension": self, "location": Vector3(location)})
 
-    def getEntities(self, options=EntityQueryOptions):
-        # type: (dict | EntityQueryOptions) -> list[__e.Entity]
+    def getEntities(self, options={}):
+        # type: (dict | EntityQueryOptions) -> list[Entity]
         """
         Gets the entities in the dimension.
         """
-        entityData = serverApi.GetEngineActor()
-        entityIds = serverApi.GetPlayerList()
-        entities = []
-        if options == EntityQueryOptions:
-            options = {}
-        options = EntityQueryOptions(options) if type(options) == dict else options
-        if options.selfCheck():
-            for entityId in entityData:
-                if entityData[entityId]['dimensionId'] == self.__dimId:
-                    entityIds.append(entityId)
-            entityIds = options.check(entityIds)
-            for entityId in entityIds:
-                entities.append(systems.core.entities[systems.core.entities.index(entityId)])
-        return entities
+        return queryEntities(options)
     
     def getEntitiesAtBlockLocation(self, location):
-        # type: (dict | Vector3) -> list[__e.Entity]
+        # type: (dict | Vector3) -> list[Entity]
         """
         Returns a set of entities at a particular location.
         """
         result = []
-        pos = Vector3(location) if type(location) == dict else location
+        pos = Vector3(location)
         entityIds = SComp.CreateGame(serverApi.GetLevelId()).GetEntitiesInSquareArea(None, (int(pos.x), int(pos.y), int(pos.z)), (int(pos.x), int(pos.y), int(pos.z)), self.dimId)
         for entityId in entityIds:
             result.append(systems.core.entities[systems.core.entities.index(entityId)])
         return result
 
-    def getPlayers(self, options=EntityQueryOptions):
-        # type: (dict | EntityQueryOptions) -> list[__e.Player]
-        playerIds = serverApi.GetPlayerList()
-        if options == EntityQueryOptions:
-            options = {}
-        options = EntityQueryOptions(options) if type(options) == dict else options
-        players = []
-        if options.selfCheck():
-            for playerId in playerIds:
-                if SComp.CreateDimension(playerId).GetEntityDimensionId() != self.dimId:
-                    playerIds.remove(playerId)
-            playerIds = options.check(playerIds)
-            for playerId in playerIds:
-                players.append(systems.core.entities[systems.core.entities.index(playerId)])
-        return players
+    def getPlayers(self, options={}):
+        options["type"] = "minecraft:player"
+        return queryEntities(options)
 
     def getPlayer(self, playerId):
         """get player by id"""
@@ -169,7 +144,7 @@ class Dimension(object):
         """
         world = systems.world
         itemDict = itemStack.getItemDict()
-        location = Vector3(location) if type(location) == dict else location
+        location = Vector3(location)
         itemId = world.CreateEngineItemEntity(itemDict, self.__dimId, (location.x, location.y, location.z))
         return systems.core.entities[systems.core.entities.index(itemId)]
     
@@ -181,20 +156,26 @@ class Dimension(object):
     def createExplosion(self, location, radius, explosionOptions={}):
         # type: (Vector3 | dict, float, dict | ExplosionOptions) -> bool
         """Creates an explosion at the specified location."""
-        location = Vector3(location) if type(location) == dict else location
+        location = Vector3(location)
         options = ExplosionOptions(explosionOptions) if type(explosionOptions) == dict else explosionOptions
         return SComp.CreateExplosion(serverApi.GetLevelId()).CreateExplosion((location.x, location.y, location.z), radius, options.causesFire, options.breaksBlocks, options.source.id, options.source.id)
     
-    def fillBlocks(self, volume, block, options):
-        # type: (__b.BlockVolume, __b.BlockPermutation | str, 0) -> 0 
+    def fillBlocks(self, volume, block, options={}):
+        # type: (__b.BlockVolume, __b.BlockPermutation | str, dict) -> None
         """Fills an area of blocks with a specific block type."""
         if not isinstance(volume, self.__b.BlockVolumeBase):
             print("[Error][ModSAPI][TypeError] volume should be BlockVolumeBase type")
             return
+        if isinstance(block, self.__b.Block):
+            blockType = block.type.id
+            blockAux = block.type.aux
+        else:
+            blockType = block
+            blockAux = 0
         comp = SComp.CreateBlock(serverApi.GetLevelId())
         data = comp.GetBlockPaletteBetweenPos(self.dimId, volume.fromLocation.getIntTuple(), volume.toLocation.getIntTuple(), False).SerializeBlockPalette()
         temp = BlockPaletteData(data)
-        temp.fillAllBlocks((block.type.id, block.type.aux))
+        temp.fillAllBlocks((blockType, blockAux))
         data = temp.getData()
         p = comp.GetBlankBlockPalette()
         p.DeserializeBlockPalette(data)

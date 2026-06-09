@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from typing import Callable
+from typing import Callable, Any
 from ..EventBases import *
-import mod.server.extraServerApi as serverApi
 from ..core.SystemEvents import *
 
 class ServerEventReceiveAfterEventSignal(Events):
@@ -18,3 +17,11 @@ class ServerEventReceiveAfterEventSignal(Events):
         """
         Registers a new ScriptEvent handler.
         """
+
+class ServerRequestDataAfterEventSignal(Events):
+    """
+    Allows for registering an event handler that responds to inbound /scriptevent commands.
+    """
+
+    def subscribe(self, eventName: str, callback: Callable[[], Any], options={}):
+        """"""

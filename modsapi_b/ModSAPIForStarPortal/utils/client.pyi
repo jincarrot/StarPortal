@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from ..modules.client.Client import Client
+import typing
 class Systems:
 
     @property

@@ -10,13 +10,12 @@ class ModSAPI(object):
     @Mod.InitServer()
     def ModSAPIServerInit(self):
         basePath = self.__class__.__module__.split(".")[0]
-        serverApi.RegisterSystem(Namespace, "core", "%s.utils.core.CoreSystem" % basePath)
         serverApi.RegisterSystem(Namespace, "world", "%s.modules.server.World.World" % basePath)
         serverApi.RegisterSystem(Namespace, "system", "%s.modules.server.System.System" % basePath)
         serverApi.RegisterSystem(Namespace, "modules", "%s.utils.modules.Modules" % basePath)
         serverApi.RegisterSystem(Namespace, "enums", "%s.utils.enums.Enums" % basePath)
         serverApi.RegisterSystem(Namespace, "components", "%s.utils.components.Components" % basePath)
-        
+        serverApi.RegisterSystem(Namespace, "core", "%s.utils.core.CoreSystem" % basePath)
         """serverApi.RegisterSystem("SAPI", "system",
                                  "Scripts_SAPI.SAPI_S.System")
         SubsystemManager.createServerSystem('SAPI', 'Base', 'Scripts_SAPI.minecraft.SAPIS')"""

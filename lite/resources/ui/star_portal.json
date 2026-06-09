@@ -1,0 +1,84 @@
+{
+    "manage_btn@common.button": {
+        "type": "button",
+        "$control_alpha": 1.0,
+        "$default_texture": "textures/ui/square",
+        "$hover_texture": "textures/ui/square",
+        "$is_new_nine_slice": false,
+        "$label_color": [
+            1,
+            1,
+            1
+        ],
+        "$label_font_scale_factor": 1.0,
+        "$label_font_size": "default",
+        "$label_layer": 3,
+        "$label_offset": [
+            0,
+            0
+        ],
+        "$label_text": "星塔管理",
+        "$nine_slice_buttom": 0,
+        "$nine_slice_left": 0,
+        "$nine_slice_right": 0,
+        "$nine_slice_top": 0,
+        "$nineslice_size": [
+            0,
+            0,
+            0,
+            0
+        ],
+        "$pressed_button_name": "%netease_editor_template_namespace.click",
+        "$pressed_texture": "textures/ui/square",
+        "$texture_layer": 2,
+        "size": [
+            30,
+            30
+        ],
+        "anchor_from": "bottom_middle",
+        "anchor_to": "bottom_middle",
+        "offset": [
+            0,
+            -40
+        ],
+        "layer": 2,
+        "button_mappings": [],
+        "default_control": "default",
+        "hover_control": "hover",
+        "is_handle_button_move_event": true,
+        "pressed_control": "pressed",
+        "bindings": [
+            {
+                "binding_type": "collection_details",
+                "binding_collection_name": "",
+                "binding_condition": "always_when_visible"
+            }
+        ],
+        "controls": [
+            {
+                "image": {
+                    "type": "image",
+                    "size": [
+                        "100%",
+                        "100%"
+                    ],
+                    "texture": "textures/ui/star_portal/manage_btn_bg",
+                    "visible": false
+                }
+            },
+            {
+                "default@netease_editor_template_namespace.default": {}
+            },
+            {
+                "hover@netease_editor_template_namespace.hover": {}
+            },
+            {
+                "pressed@netease_editor_template_namespace.pressed": {}
+            },
+            {
+                "button_label@netease_editor_template_namespace.button_label": {}
+            }
+        ]
+    },
+    "namespace": "star_portal"
+}
