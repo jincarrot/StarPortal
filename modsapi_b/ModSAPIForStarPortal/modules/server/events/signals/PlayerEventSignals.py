@@ -106,7 +106,7 @@ class PlayerInteractWithEntityAfterEventSignal(Events):
         """
         Adds a callback that will be called after a player interacts with an entity.
         """
-        EventListener("PlayerInteractServerEvent", callback, None, None, None, InteractEvent)
+        EventListener("PlayerInteractServerEvent", lambda event: None, None, None, None, InteractEvent)
         self._events[id(callback)] = EventListener(self.__eventName, callback, None, None, None, PlayerInteractWithEntityAfterEvent)
 
 class PlayerInventoryItemChangeAfterEventSignal(Events):

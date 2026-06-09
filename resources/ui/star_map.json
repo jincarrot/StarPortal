@@ -1,0 +1,260 @@
+{
+    "namespace": "star_map",
+
+    "background": {
+        "type": "image",
+        "texture": "textures/ui/square",
+        "color": [ 0.06, 0.06, 0.09 ],
+        "alpha": 0.96,
+        "size": [ "100%", "100%" ],
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "offset": [ 0, 0 ]
+    },
+
+    "crystal_icon_img": {
+        "type": "image",
+        "texture": "textures/items/core_portal",
+        "size": [ "100%", "100%" ],
+        "anchor_from": "center",
+        "anchor_to": "center"
+    },
+
+    "link_line": {
+        "type": "image",
+        "texture": "textures/ui/square",
+        "color": [ 1, 1, 1 ],
+        "alpha": 0.55,
+        "size": [ 1, 2 ],
+        "anchor_from": "top_left",
+        "anchor_to": "center",
+        "layer": 1
+    },
+
+    "crystal_btn": {
+        "type": "button",
+        "size": [ 18, 18 ],
+        "anchor_from": "top_left",
+        "anchor_to": "center",
+        "layer": 5,
+        "default_control": "icon",
+        "hover_control": "icon",
+        "pressed_control": "icon",
+        "controls": [
+            { "icon@star_map.crystal_icon_img": {} },
+            {
+                "name": {
+                    "type": "label",
+                    "text": "",
+                    "color": [ 0.88, 0.93, 1.0 ],
+                    "anchor_from": "top_middle",
+                    "anchor_to": "top_middle",
+                    "offset": [ 0, 10 ],
+                    "font_scale_factor": 0.8,
+                    "layer": 5
+                }
+            }
+        ]
+    },
+
+    "icon_button": {
+        "type": "button",
+        "size": [ 22, 22 ],
+        "$btn_label|default": "",
+        "default_control": "bg",
+        "hover_control": "bg_hover",
+        "pressed_control": "bg_hover",
+        "controls": [
+            {
+                "bg": {
+                    "type": "image",
+                    "texture": "textures/ui/square",
+                    "color": [ 0.18, 0.21, 0.3 ],
+                    "alpha": 0.92,
+                    "size": [ "100%", "100%" ],
+                    "controls": [
+                        {
+                            "lbl": {
+                                "type": "label",
+                                "text": "$btn_label",
+                                "color": [ 1, 1, 1 ],
+                                "anchor_from": "center",
+                                "anchor_to": "center",
+                                "layer": 3
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "bg_hover": {
+                    "type": "image",
+                    "texture": "textures/ui/square",
+                    "color": [ 0.3, 0.36, 0.5 ],
+                    "alpha": 0.96,
+                    "size": [ "100%", "100%" ],
+                    "controls": [
+                        {
+                            "lbl2": {
+                                "type": "label",
+                                "text": "$btn_label",
+                                "color": [ 1, 1, 1 ],
+                                "anchor_from": "center",
+                                "anchor_to": "center",
+                                "layer": 3
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+
+    "star_container": {
+        "type": "input_panel",
+        "size": [ "100%", "100%" ],
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "offset": [ 0, 0 ],
+        "draggable": "both",
+        "contained": false,
+        "is_swallow": true,
+        "button_mappings": [
+            {
+                "from_button_id": "button.menu_select",
+                "to_button_id": "#netease_to_button_id",
+                "mapping_type": "pressed"
+            }
+        ]
+    },
+
+    "viewport": {
+        "type": "panel",
+        "size": [ 320, 176 ],
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "offset": [ 0, 24 ],
+        "clips_children": true,
+        "controls": [
+            { "star_container@star_map.star_container": {} }
+        ]
+    },
+
+    "title_bar": {
+        "type": "image",
+        "texture": "textures/ui/square",
+        "color": [ 0.15, 0.17, 0.26 ],
+        "alpha": 0.97,
+        "size": [ 320, 24 ],
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "offset": [ 0, 0 ],
+        "controls": [
+            {
+                "title": {
+                    "type": "label",
+                    "text": "星图 · 星塔星座 §7(拖标题栏移动 · 拖空白处平移)",
+                    "color": [ 0.8, 0.86, 1.0 ],
+                    "anchor_from": "left_middle",
+                    "anchor_to": "left_middle",
+                    "offset": [ 8, 0 ],
+                    "layer": 3
+                }
+            }
+        ]
+    },
+
+    "side_panel": {
+        "type": "stack_panel",
+        "orientation": "vertical",
+        "size": [ 24, 84 ],
+        "anchor_from": "top_right",
+        "anchor_to": "top_right",
+        "offset": [ -2, 28 ],
+        "controls": [
+            { "btn_close@star_map.icon_button": { "$btn_label": "×", "size": [ 22, 22 ] } },
+            { "pad1": { "type": "panel", "size": [ 22, 4 ] } },
+            { "btn_zoom_in@star_map.icon_button": { "$btn_label": "+", "size": [ 22, 22 ] } },
+            { "pad2": { "type": "panel", "size": [ 22, 4 ] } },
+            { "btn_zoom_out@star_map.icon_button": { "$btn_label": "-", "size": [ 22, 22 ] } }
+        ]
+    },
+
+    "teleport_bar": {
+        "type": "panel",
+        "size": [ 320, 32 ],
+        "anchor_from": "bottom_left",
+        "anchor_to": "bottom_left",
+        "offset": [ 0, 0 ],
+        "visible": false,
+        "controls": [
+            {
+                "bg": {
+                    "type": "image",
+                    "texture": "textures/ui/square",
+                    "color": [ 0.15, 0.17, 0.26 ],
+                    "alpha": 0.97,
+                    "size": [ "100%", "100%" ]
+                }
+            },
+            {
+                "tp_name": {
+                    "type": "label",
+                    "text": "",
+                    "color": [ 1, 1, 1 ],
+                    "anchor_from": "left_middle",
+                    "anchor_to": "left_middle",
+                    "offset": [ 10, 0 ],
+                    "layer": 3
+                }
+            },
+            { "tp_btn@star_map.icon_button": { "$btn_label": "传送", "size": [ 56, 24 ], "anchor_from": "right_middle", "anchor_to": "right_middle", "offset": [ -68, 0 ] } },
+            { "tp_close@star_map.icon_button": { "$btn_label": "关闭", "size": [ 56, 24 ], "anchor_from": "right_middle", "anchor_to": "right_middle", "offset": [ -8, 0 ] } }
+        ]
+    },
+
+    "window": {
+        "type": "input_panel",
+        "size": [ 320, 200 ],
+        "anchor_from": "center",
+        "anchor_to": "center",
+        "offset": [ 0, 0 ],
+        "draggable": "both",
+        "contained": false,
+        "is_swallow": true,
+        "button_mappings": [
+            {
+                "from_button_id": "button.menu_select",
+                "to_button_id": "#netease_to_button_id",
+                "mapping_type": "pressed"
+            }
+        ],
+        "controls": [
+            {
+                "frame": {
+                    "type": "image",
+                    "texture": "textures/ui/square",
+                    "color": [ 0.1, 0.11, 0.16 ],
+                    "alpha": 0.9,
+                    "size": [ "100%", "100%" ],
+                    "anchor_from": "top_left",
+                    "anchor_to": "top_left"
+                }
+            },
+            { "viewport@star_map.viewport": {} },
+            { "title_bar@star_map.title_bar": {} },
+            { "side_panel@star_map.side_panel": {} },
+            { "teleport_bar@star_map.teleport_bar": {} }
+        ]
+    },
+
+    "main": {
+        "type": "screen",
+        "size": [ "100%", "100%" ],
+        "is_showing_menu": true,
+        "controls": [
+            { "background@star_map.background": {} },
+            { "window@star_map.window": {} }
+        ]
+    }
+}

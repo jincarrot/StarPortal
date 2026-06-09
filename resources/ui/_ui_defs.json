@@ -1,5 +1,6 @@
 {
     "ui_defs": [
-        "ui/star_portal.json"
+        "ui/star_portal.json",
+        "ui/star_map.json"
     ]
 }

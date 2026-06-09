@@ -306,27 +306,34 @@ def deletePortalData(entityId, data=None):
             return True
     return False
 
-def repairPortalData(data=None):
+def repairPortalData(data=None, parent=None):
+    isRoot = data is None
     if data is None:
         data = getPortalData()
     for entityId in list(data.keys()):
+        portalData = data[entityId]
+        dimension = world.getDimension(portalData['location'][3])
         portal = world.getEntity(entityId)
         if not portal or not portal.isValid:
-            portal = world.getDimension(data[entityId]['location'][3]).spawnEntity("elspirit:%s_portal" % data[entityId]['type'], data[entityId]['location'][:3:])
-        portal.teleport(data[entityId]['location'][:3:], {"dimension": world.getDimension(data[entityId]['location'][3])})
-        name = data[entityId]['name']
-        color = data[entityId]['color']
-        scale = data[entityId]['scale']
-        portal.nameTag = name
-        portal.setProperty("elspirit:color", color)
-        portal.setProperty("elspirit:scale", scale)
-        repairPortalData(data[entityId].get("nodes", {}))
+            portal = dimension.spawnEntity("elspirit:%s_portal" % portalData['type'], portalData['location'][:3:])
+            world.tickingAreaManager.createTickingArea(portal.id, {"dimension": dimension, "from": portal.location, "to": portal.location})
+            disablePortalsAI(portal.id)
+        portal.teleport(portalData['location'][:3:], {"dimension": dimension})
+        # 子星塔的名称带有“前往[父星塔]”后缀，核心星塔只显示裸名称
+        if portalData['type'] == 'sub' and parent:
+            portal.nameTag = "%s\n前往[%s]" % (portalData['name'], parent['name'])
+        else:
+            portal.nameTag = portalData['name']
+        portal.setProperty("elspirit:color", portalData['color'])
+        portal.setProperty("elspirit:scale", portalData['scale'])
+        repairPortalData(portalData.get("nodes", {}), portalData)
         if portal.id != entityId:
-            temp = data[entityId]
-            temp['entityId'] = portal.id
+            portalData['entityId'] = portal.id
             del data[entityId]
-            data[portal.id] = temp
-            world.setDynamicProperty("elspirit:portals", data)
+            data[portal.id] = portalData
+    # 仅在最顶层持久化一次完整的树，避免把子树片段写回根属性
+    if isRoot:
+        world.setDynamicProperty("elspirit:portals", data)
 
 @world.afterEvents.playerSpawn.subscribe
 def onPlayerSpawn(arg):
@@ -355,6 +362,47 @@ def onInteract(arg):
         onInteractTempPortal(arg.player, arg.target)
     elif arg.target.typeId == "elspirit:sub_portal":
         onInteractSubPortalPre(arg.player, arg.target)
+
+NODE_MIN_SEPARATION = 0.3  # 相邻小水晶端点之间的最小间距（方块），可按水晶视觉大小调整
+
+def declutterDirections(dirs, minSep, iterations=32):
+    # type: (list[dict], float, int) -> None
+    """就地分离一组共享同一原点的方向向量，使端点两两间距不小于 minSep。
+
+    采用力导向松弛：对靠得过近的水晶沿连线方向相互推开，
+    在尽量保留各自真实朝向的前提下消除重叠。
+    """
+    count = len(dirs)
+    if count < 2:
+        return
+    minSepSq = minSep * minSep
+    for _ in range(iterations):
+        moved = False
+        for i in range(count):
+            for j in range(i + 1, count):
+                a = dirs[i]
+                b = dirs[j]
+                dx = a["x"] - b["x"]
+                dy = a["y"] - b["y"]
+                dz = a["z"] - b["z"]
+                distSq = dx * dx + dy * dy + dz * dz
+                if distSq >= minSepSq:
+                    continue
+                dist = math.sqrt(distSq)
+                if dist < 1e-4:
+                    # 两点几乎重合：按黄金角给一个确定性的水平偏移方向
+                    angle = i * 2.39996
+                    dx, dy, dz = math.cos(angle), 0.0, math.sin(angle)
+                    dist = 1.0
+                push = (minSep - dist) / 2.0
+                ox = dx / dist * push
+                oy = dy / dist * push
+                oz = dz / dist * push
+                a["x"] += ox; a["y"] += oy; a["z"] += oz
+                b["x"] -= ox; b["y"] -= oy; b["z"] -= oz
+                moved = True
+        if not moved:
+            break
 
 def onInteractCorePortal(player, portal):
     # type: (Player, Entity) -> None
@@ -480,23 +528,33 @@ def onInteractCorePortal(player, portal):
     interactions = []
     def spawnNodes(ori, portalData):
         ori = {"x": ori.x, "y": ori.y, "z": ori.z}
-        
+        # 兄弟节点共享同一个原点 ori2
+        ori2 = {"x": ori['x'], "y": (ori['y'] + 0.3 + portalData['scale'] * 0.2) if portalData['id'] == portalId else (ori['y'] + 0.15), "z": ori['z']}
+        minRadius = portalData['scale'] * 0.2
+        # 第一步：算出每个可见节点相对原点的缩放方向向量
+        visibleNodes = []
         for node in portalData['nodes'].values():
             if not getCanTeleportTo(node, player):
                 continue
             tar = {"x": node['location'][0], "y": node['location'][1] + 0.3 + portalData['scale'] * 0.2, "z": node['location'][2]}
-            ori2 = {"x": ori['x'], "y": (ori['y'] + 0.3 + portalData['scale'] * 0.2) if portalData['id'] == portalId else (ori['y'] + 0.15), "z": ori['z']}
             dir = { "x": tar["x"] - ori2['x'], "y": tar["y"] - ori2['y'], "z": tar["z"] - ori2['z'] }
-            length = math.sqrt(dir["x"] ** 2 + dir["y"] ** 2 + dir["z"] ** 2)
             dir = { "x": dir["x"] * 4.0 / maxLength, "y": dir["y"] * 4.0 / maxLength, "z": dir["z"] * 4.0 / maxLength}
-            if math.sqrt(dir["x"] ** 2 + dir["y"] ** 2 + dir["z"] ** 2) < portalData['scale'] * 0.2:
+            dirLength = math.sqrt(dir["x"] ** 2 + dir["y"] ** 2 + dir["z"] ** 2)
+            if 0 < dirLength < minRadius:
                 dir = {
-                    "x": dir["x"] * portalData['scale'] * 0.2 / math.sqrt(dir["x"] ** 2 + dir["y"] ** 2 + dir["z"] ** 2),
-                    "y": dir["y"] * portalData['scale'] * 0.2 / math.sqrt(dir["x"] ** 2 + dir["y"] ** 2 + dir["z"] ** 2),
-                    "z": dir["z"] * portalData['scale'] * 0.2 / math.sqrt(dir["x"] ** 2 + dir["y"] ** 2 + dir["z"] ** 2)
+                    "x": dir["x"] * minRadius / dirLength,
+                    "y": dir["y"] * minRadius / dirLength,
+                    "z": dir["z"] * minRadius / dirLength
                 }
+            visibleNodes.append({"node": node, "dir": dir})
+        # 第二步：分离过近的水晶，消除重叠
+        declutterDirections([item["dir"] for item in visibleNodes], NODE_MIN_SEPARATION)
+        # 第三步：生成实体与星线
+        for item in visibleNodes:
+            node = item["node"]
+            dir = item["dir"]
             entity = portal.dimension.spawnEntity(
-                "elspirit:temp_portal", 
+                "elspirit:temp_portal",
                 (ori2['x'] + dir["x"], ori2['y'] + dir["y"] - 0.15, ori2['z'] + dir["z"]))
             entity.setDynamicProperty("elspirit:portalId", node['id'])
             entity.setDynamicProperty("elspirit:mainPortalEntityId", portal.id)
@@ -952,9 +1010,12 @@ def onItemUseOn(arg):
                 deleteForm.label("§c警告：删除星塔将会导致该星塔及其子星塔均被删除！§r")
                 portalList = getPortalDataList()
                 def deletePortal(portalData):
+                    form.close()
+                deleteForm = CustomForm.create(arg.source, "删除星塔")
+                deleteForm.label("§c警告：删除星塔将会导致该星塔及其子星塔均被删除！§r")
+                portalList = getPortalDataList()
+                def deletePortal(portalData):
                     deleteForm.close()
-                    form = CustomForm.create(arg.source, "确认删除星塔")
-                    
                     portalsNeedDel = world.getDynamicProperty("portals_need_to_delete") or []
                     nodes = {portalData['entityId']: portalData}
                     def delete(nodes):
@@ -967,17 +1028,12 @@ def onItemUseOn(arg):
                             else:
                                 portalsNeedDel.append(entityId)
                             delete(nodes[entityId]['nodes'])
+                    delete(nodes)
+                    world.setDynamicProperty("portals_need_to_delete", portalsNeedDel)
                     data = getPortalData()
-                    form.button("取消", form.close)
-                    form.button("删除", lambda: (
-                        delete(nodes), 
-                        world.setDynamicProperty("portals_need_to_delete", portalsNeedDel),
-                        deletePortalData(portalData['entityId'], data),
-                        world.setDynamicProperty("elspirit:portals", data),
-                        form.close()
-                        )
-                    )
-                    form.show()
+                    deletePortalData(portalData['entityId'], data)
+                    world.setDynamicProperty("elspirit:portals", data)
+
                 for portalData in portalList:
                     deleteForm.button(portalData['name'], lambda pd=portalData: deletePortal(pd))
                 deleteForm.show()
@@ -1013,8 +1069,12 @@ def onItemUseOn(arg):
                 alert.button("点击开始修复", doRepair, {"visible": visibility})
                 alert.button("清空所有数据", clearData, {"visible": visibility})
                 alert.show()
+            def openMap():
+                form.close()
+                openStarMapFor(arg.source.asPlayer())
             form = CustomForm.create(arg.source, "星塔管理菜单")
             form.spacer()
+            form.button("§b星图（星座地图）", openMap)
             form.button("模组介绍", intro)
             form.button("给予玩家星塔", give)
             form.button("传送至星塔", teleport)
@@ -1024,20 +1084,22 @@ def onItemUseOn(arg):
             form.toggle("星塔可合成", enableRecipes)
             form.show()
         else:
-            lastTime = arg.source.getDynamicProperty("elspirit:lastUseController") or 0
-            current = world.getAbsoluteTime()
-            if current - lastTime < 2400:
-                arg.source.sendMessage("§c冷却中，剩余%d秒" % ((2400 - (current - lastTime)) // 20))
-                return
+            player = arg.source.asPlayer()
             form = CustomForm.create(arg.source, "传送")
+            form.button("§b星图（星座地图）", lambda: (form.close(), openStarMapFor(player)))
+            form.divider()
             form.label("请选择要传送的星塔")
-            portals = getAllLinkablePortals(arg.source.asPlayer())
+            def directTeleport(pd):
+                lastTime = arg.source.getDynamicProperty("elspirit:lastUseController") or 0
+                current = world.getAbsoluteTime()
+                if current - lastTime < 2400:
+                    arg.source.sendMessage("§c冷却中，剩余%d秒" % ((2400 - (current - lastTime)) // 20))
+                    return
+                arg.source.teleport(pd['location'], {"dimension": world.getDimension(pd['location'][3])})
+                arg.source.setDynamicProperty("elspirit:lastUseController", world.getAbsoluteTime())
+            portals = getAllLinkablePortals(player)
             for portalData in portals:
-                form.button(portalData['name'], lambda pd=portalData: (
-                    arg.source.teleport(pd['location'], {"dimension": world.getDimension(pd['location'][3])}), 
-                    arg.source.setDynamicProperty("elspirit:lastUseController", world.getAbsoluteTime())
-                    )
-                )
+                form.button(portalData['name'], lambda pd=portalData: directTeleport(pd))
             form.show()
 
 def openStarPortalManager(arg):
@@ -1191,6 +1253,86 @@ def openStarPortalManager(arg):
         teleport.show()
 
 system.afterEvents.clientEventReceive.subscribe("openStarPortalManager", openStarPortalManager)
+
+
+# ============================================================
+# 星图（星塔星座地图）
+# ============================================================
+def buildStarMapPayload(player):
+    # type: (Player) -> dict
+    """收集该玩家可见（可传送至）的星塔，连同其在网络中的父节点id一起下发，
+    供客户端绘制星座连线。"""
+    portals = []
+    def walk(nodeDict, parentId):
+        for entityId, portalData in nodeDict.items():
+            if entityId == "father" or not isinstance(portalData, dict):
+                continue
+            if getCanTeleportTo(portalData, player):
+                portals.append({
+                    "id": portalData['id'],
+                    "name": portalData['name'],
+                    "color": portalData.get('color', 0),
+                    "type": portalData['type'],
+                    "location": portalData['location'],
+                    "enable": portalData.get('enable', True),
+                    "parentId": parentId,
+                })
+            walk(portalData.get("nodes", {}), portalData['id'])
+    walk(getPortalData(), 0)
+    loc = player.location
+    return {
+        "portals": portals,
+        "center": [loc.x, loc.z],
+        "dimId": player.dimension.dimId,
+    }
+
+def openStarMapFor(player):
+    # type: (Player) -> None
+    payload = buildStarMapPayload(player)
+    if not payload['portals']:
+        player.sendMessage("§c没有可显示的星塔！")
+        return
+    system.sendToClient(player, "openStarMap", payload)
+
+def onStarMapTeleport(arg):
+    # type: (ClientEventReceiveAfterEvent) -> None
+    player = world.getEntity(arg.data['playerId'])
+    if not player:
+        return
+    player = player.asPlayer()
+    portalData = getPortalDataById(arg.data['portalId'])
+    if not portalData:
+        player.sendMessage("§c该星塔已不存在！")
+        return
+    if not portalData['enable']:
+        player.sendMessage("§c此星塔已被禁用！")
+        return
+    if not getCanTeleportTo(portalData, player):
+        player.sendMessage("§c您没有权限传送至这个星塔！")
+        return
+    # 非管理员沿用星塔控制器的冷却，防止滥用快速传送
+    if player.playerPermissionLevel != 2:
+        lastTime = player.getDynamicProperty("elspirit:lastUseController") or 0
+        current = world.getAbsoluteTime()
+        if current - lastTime < 2400:
+            player.sendMessage("§c冷却中，剩余%d秒" % ((2400 - (current - lastTime)) // 20))
+            return
+    targetLocation = portalData['location']
+    saveHeight = 4
+    for i in range(1, 4):
+        if player.dimension.getBlock((targetLocation[0], targetLocation[1] + i, targetLocation[2])).typeId != "minecraft:air":
+            saveHeight = i - 1
+            break
+    targetLocation = (targetLocation[0] + 0.5, targetLocation[1] + saveHeight, targetLocation[2] + 0.5, targetLocation[3])
+    def doTeleport():
+        player.teleport(targetLocation, {"dimension": world.getDimension(targetLocation[3])})
+        player.addEffect("slow_falling", 100, {"showParticle": False})
+        system.sendToClient(player, "teleportEnd", targetLocation)
+    system.runTimeout(doTeleport, 40)
+    system.sendToClient(player, "teleport", player.location.getTuple())
+    player.setDynamicProperty("elspirit:lastUseController", world.getAbsoluteTime())
+
+system.afterEvents.clientEventReceive.subscribe("starMapTeleport", onStarMapTeleport)
 
 def initialRecipes():
     if not world.getDynamicProperty("star_portal.disableRecipes"):
