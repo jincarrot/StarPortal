@@ -21,7 +21,9 @@ world.portals: {
         scale: int,
         location: tuple[x, y, z, dimId],
         owner: playerId,
-        permissions: "public" | "private" | playerId[],
+        usePermissions: "public" | "private" | playerName[],   # who can use (interact with) this portal
+        teleportPermissions: "public" | "private" | playerName[],   # who can teleport to this portal
+        # permissions: legacy single field, kept only for backward compatibility on read
         type: "core" | "sub",
         effects: {
             effectType: {
@@ -138,33 +140,106 @@ def getPortalDataList():
         addToList(portal)
     return result
 
-def getIsLinkable(portalData, player):
-    # type: (dict, Player) -> bool
-    """Get whether the portal is linkable for the player."""
-    if portalData['type'] == 'sub':
-        return False
+def getUsePermission(portalData):
+    # type: (dict) -> str | list
+    """Get the "who can use this portal" permission, falling back to the legacy field."""
+    if 'usePermissions' in portalData:
+        return portalData['usePermissions']
+    return portalData.get('permissions', 'public')
+
+def getTeleportPermission(portalData):
+    # type: (dict) -> str | list
+    """Get the "who can teleport to this portal" permission, falling back to the legacy field."""
+    if 'teleportPermissions' in portalData:
+        return portalData['teleportPermissions']
+    return portalData.get('permissions', 'public')
+
+def checkPermission(permission, portalData, player):
+    # type: (str | list, dict, Player) -> bool
+    """Check a permission value against a player. Owner always passes."""
     if portalData['owner'] == player.id:
         return True
-    if portalData['permissions'] == 'public':
+    if permission == 'public':
         return True
-    elif portalData['permissions'] == "private" and portalData['owner'] == player.id:
-        return True
-    elif player.name in portalData['permissions']:
+    if isinstance(permission, list) and player.name in permission:
         return True
     return False
 
+def getIsLinkable(portalData, player):
+    # type: (dict, Player) -> bool
+    """Get whether the portal can be linked to (as a teleport destination) for the player."""
+    if portalData['type'] == 'sub':
+        return False
+    return checkPermission(getTeleportPermission(portalData), portalData, player)
+
 def getIsUsable(portalData, player):
     # type: (dict, Player) -> bool
-    """Get whether the portal is usable for the player."""
-    if portalData['owner'] == player.id:
-        return True
-    if portalData['permissions'] == 'public':
-        return True
-    elif portalData['permissions'] == "private" and portalData['owner'] == player.id:
-        return True
-    elif player.name in portalData['permissions']:
-        return True
-    return False
+    """Get whether the player may use (interact with) this portal."""
+    return checkPermission(getUsePermission(portalData), portalData, player)
+
+def getCanTeleportTo(portalData, player):
+    # type: (dict, Player) -> bool
+    """Get whether the player may teleport to this portal as a destination."""
+    return checkPermission(getTeleportPermission(portalData), portalData, player)
+
+def setupPermissionSection(form, dropdownLabel, infoHeader, initialPermission):
+    # type: (object, str, str, str | list) -> object
+    """Add a permission section (dropdown + player list editor) to a form.
+
+    Returns a getter that evaluates to the configured permission value
+    ("public" | "private" | list[str]) at submit time.
+    """
+    players = list(initialPermission) if isinstance(initialPermission, list) else []
+    permissionValue = 1 if initialPermission == 'public' else 0 if initialPermission == 'private' else 2
+    permission = Observable.create(permissionValue, {"clientWritable": True})
+    playerName = Observable.create("", {"clientWritable": True})
+    inputVisibility = Observable.create(permissionValue == 2, {"clientWritable": True})
+    def buildInfo():
+        info = infoHeader + "\n"
+        for pName in players:
+            info += pName + "\n"
+        if not players:
+            info += "无\n"
+        return info
+    currentPlayersInfo = Observable.create(buildInfo())
+    btnName = Observable.create("添加玩家")
+    @permission.subscribe
+    def onPermissionChange(new_value):
+        inputVisibility.setData(new_value == 2)
+    @playerName.subscribe
+    def onPlayerNameChange(new_value):
+        btnName.setData("添加玩家" if new_value not in players else "§4移除玩家")
+    def addOrRemovePlayer():
+        if not playerName.getData():
+            return
+        if playerName.getData() in players:
+            players.remove(playerName.getData())
+        else:
+            players.append(playerName.getData())
+        currentPlayersInfo.setData(buildInfo())
+        playerName.setData("")
+    form.dropdown(dropdownLabel, permission, [
+        {
+            "label": "公开",
+            "value": 1
+        },
+        {
+            "label": "私密",
+            "value": 0
+        },
+        {
+            "label": "指定玩家",
+            "value": 2
+        }
+    ])
+    form.label(currentPlayersInfo, {"visible": inputVisibility})
+    form.textField("玩家名称", playerName, {"visible": inputVisibility})
+    form.button(btnName, addOrRemovePlayer, {"visible": inputVisibility})
+    def getResult():
+        if permission.getData() == 2:
+            return list(players)
+        return ['private', "public"][permission.getData()]
+    return getResult
 
 def getPortalDataById(portalId, data=None):
     # type: (int, dict | None) -> dict | None
@@ -365,11 +440,11 @@ def onInteractCorePortal(player, portal):
         player.sendMessage("没有可连接的星塔!")
         return
     for node in portalData['nodes'].values():
-        if getIsUsable(node, player):
+        if getCanTeleportTo(node, player):
             canUse = True
             break
     parent = getParentByEntityId(portal.id)
-    if parent and getIsUsable(parent, player):
+    if parent and getCanTeleportTo(parent, player):
         canUse = True
     if not canUse:
         player.sendMessage("没有可连接的星塔!")
@@ -384,7 +459,8 @@ def onInteractCorePortal(player, portal):
             "scale": parent['scale'],
             "location": parent['location'],
             "owner": parent['owner'],
-            "permissions": parent['permissions'],
+            "usePermissions": getUsePermission(parent),
+            "teleportPermissions": getTeleportPermission(parent),
             "type": parent['type'],
             "nodes": {}
         }
@@ -406,7 +482,7 @@ def onInteractCorePortal(player, portal):
         ori = {"x": ori.x, "y": ori.y, "z": ori.z}
         
         for node in portalData['nodes'].values():
-            if not getIsUsable(node, player):
+            if not getCanTeleportTo(node, player):
                 continue
             tar = {"x": node['location'][0], "y": node['location'][1] + 0.3 + portalData['scale'] * 0.2, "z": node['location'][2]}
             ori2 = {"x": ori['x'], "y": (ori['y'] + 0.3 + portalData['scale'] * 0.2) if portalData['id'] == portalId else (ori['y'] + 0.15), "z": ori['z']}
@@ -478,8 +554,8 @@ def stopInteraction(player, portal=None):
 def onInteractTempPortal(player, portal):
     # type: (Player, Entity) -> None
     portalData = getPortalDataById(portal.getDynamicProperty("elspirit:portalId"))
-    if not getIsUsable(portalData, player):
-        player.sendMessage("§c您没有权限使用这个星塔！")
+    if not getCanTeleportTo(portalData, player):
+        player.sendMessage("§c您没有权限传送至这个星塔！")
         return
     stopInteraction(player, world.getEntity(portal.getDynamicProperty("elspirit:mainPortalEntityId")))
     if not portalData:
@@ -532,22 +608,9 @@ def onInteractSubPortalPre(player, portal):
         actions.close()
         # Manager
         # Observables
-        players = portalData['permissions']
-        if not isinstance(players, list):
-            players = []
-        permission = Observable.create(1 if portalData['permissions'] == 'public' else 0 if portalData['permissions'] == 'private' else 2, {"clientWritable": True})
-        playerName = Observable.create("", {"clientWritable": True})
-        playerNameInputVisibility = Observable.create(permission.getData() == 2, {"clientWritable": True})
-        info = "可使用的玩家：\n"
-        for pName in players:
-            info += pName + "\n"
-        if not players:
-            info += "无\n"
         portalName = Observable.create(portalData['name'], {"clientWritable": True})
         portalScale = Observable.create(portalData['scale'], {"clientWritable": True})
         portalColor = Observable.create(portalData['color'], {"clientWritable": True})
-        currentPlayersInfo = Observable.create(info)
-        btnName = Observable.create("添加玩家")
         linkableNodes = []# type: list[DropdownItem]
         for node in getAllLinkablePortals(player):
             if not getIsParent(portalData, node):
@@ -558,26 +621,7 @@ def onInteractSubPortalPre(player, portal):
         parentData = getParentByEntityId(portal.id)
         parentNode = Observable.create(parentData['id'] if parentData else 0, {"clientWritable": True})
         isEnabled = Observable.create(portalData['enable'], {"clientWritable": True})
-        @permission.subscribe
-        def onPermissionChange(new_value):
-            playerNameInputVisibility.setData(new_value == 2)
-        @playerName.subscribe
-        def onPlayerNameChange(new_value):
-            btnName.setData("添加玩家" if new_value not in players else "§4移除玩家")
-        def addOrRemovePlayer():
-            if not playerName.getData():
-                return
-            if playerName.getData() in players:
-                players.remove(playerName.getData())
-            else:
-                players.append(playerName.getData())
-            info = "可使用的玩家：\n"
-            for pName in players:
-                info += pName + "\n"
-            if not players:
-                info += "无\n"
-            currentPlayersInfo.setData(info)
-            playerName.setData("")
+        permissionGetters = {}
 
         def submit():
             parent = getParentByEntityId(portal.id)
@@ -587,10 +631,9 @@ def onInteractSubPortalPre(player, portal):
             portalData['name'] = portalName.getData()
             portalData['color'] = portalColor.getData()
             portalData['scale'] = portalScale.getData()
-            if permission.getData() == 2:
-                portalData['permissions'] = players
-            else:
-                portalData['permissions'] = ['private', "public"][permission.getData()]
+            portalData['usePermissions'] = permissionGetters['use']()
+            portalData['teleportPermissions'] = permissionGetters['teleport']()
+            portalData.pop('permissions', None)
             deletePortalData(portal.id, data)
             if parentNode.getData() == 0:
                 targetNode = data
@@ -625,23 +668,11 @@ def onInteractSubPortalPre(player, portal):
         manager.slider("星塔尺寸", portalScale, 1, 16)
         manager.dropdown("星塔颜色", portalColor, colors)
         manager.divider()
-        manager.dropdown("权限设置", permission, [
-            {
-                "label": "公开",
-                "value": 1
-            },
-            {
-                "label": "私密",
-                "value": 0
-            },
-            {
-                "label": "指定玩家",
-                "value": 2
-            }
-        ])
-        manager.label(currentPlayersInfo, {"visible": playerNameInputVisibility})
-        manager.textField("玩家名称", playerName, {"visible": playerNameInputVisibility})
-        manager.button(btnName, addOrRemovePlayer, {"visible": playerNameInputVisibility})
+        permissionGetters['use'] = setupPermissionSection(
+            manager, "谁可以使用此星塔", "可使用的玩家：", getUsePermission(portalData))
+        manager.divider()
+        permissionGetters['teleport'] = setupPermissionSection(
+            manager, "谁可以传送至此星塔", "可传送至此的玩家：", getTeleportPermission(portalData))
         manager.divider()
         manager.dropdown("主星塔", parentNode, linkableNodes)
         manager.divider()
@@ -668,6 +699,9 @@ def onInteractSubPortal(player, portal):
         return
     parentData = getParentByEntityId(portal.id)
     if parentData:
+        if not getCanTeleportTo(parentData, player):
+            player.sendMessage("§c您没有权限传送至这个星塔！")
+            return
         targetLocation = parentData['location']
         saveHeight = 4
         for i in range(1, 4):
@@ -694,7 +728,6 @@ def onItemUseOn(arg):
     portal_name = Observable.create("", {"clientWritable": True})
     selected_color = Observable.create(0, {"clientWritable": True})
     scale = Observable.create(4, {"clientWritable": True})
-    players = []
     submit_visibility = Observable.create(False)
     nodes = [{"label": "无", "value": 0}] # type: list[DropdownItem]
     for node in getAllLinkablePortals(player):
@@ -703,46 +736,7 @@ def onItemUseOn(arg):
             "value": node['id']
         })
     parentNode = Observable.create(0, {"clientWritable": True})
-    permissions = [
-        {
-            "label": "公开",
-            "value": 1
-        },
-        {
-            "label": "私密",
-            "value": 0
-        },
-        {
-            "label": "指定玩家",
-            "value": 2
-        }
-    ]
-    permission = Observable.create(0, {"clientWritable": True})
-    playerName = Observable.create("", {"clientWritable": True})
-    playerNameInputVisibility = Observable.create(permission.getData() == 2, {"clientWritable": True})
-    info = "可使用的玩家：\n无"
-    currentPlayersInfo = Observable.create(info)
-    btnName = Observable.create("添加玩家")
-    @permission.subscribe
-    def onPermissionChange(new_value):
-        playerNameInputVisibility.setData(new_value == 2)
-    @playerName.subscribe
-    def onPlayerNameChange(new_value):
-        btnName.setData("添加玩家" if new_value not in players else "§4移除玩家")
-    def addOrRemovePlayer():
-        if not playerName.getData():
-            return
-        if playerName.getData() in players:
-            players.remove(playerName.getData())
-        else:
-            players.append(playerName.getData())
-        info = "可使用的玩家：\n"
-        for pName in players:
-            info += pName + "\n"
-        if not players:
-            info += "无\n"
-        currentPlayersInfo.setData(info)
-        playerName.setData("")
+    permissionGetters = {}
     setIsTeamAnchor = Observable.create(False, {"clientWritable": True})
     if arg.itemStack.typeId == "elspirit:core_portal_item":
         @portal_name.subscribe
@@ -784,7 +778,8 @@ def onItemUseOn(arg):
                 "scale": scale.getData(),
                 "location": (loc.x, loc.y, loc.z, player.dimension.dimId),
                 "owner": player.id,
-                "permissions": ["private", "public", players][permission.getData()],
+                "usePermissions": permissionGetters['use'](),
+                "teleportPermissions": permissionGetters['teleport'](),
                 "type": "core",
                 "enable": True,
                 "nodes": {}
@@ -804,10 +799,13 @@ def onItemUseOn(arg):
         form.dropdown("星塔颜色", selected_color, colors)
         form.slider("星塔尺寸", scale, 1, 16)
         form.dropdown("主星塔", parentNode, nodes)
-        form.dropdown("权限设置", permission, permissions)
-        form.label(currentPlayersInfo, {"visible": playerNameInputVisibility})
-        form.textField("玩家名称", playerName, {"visible": playerNameInputVisibility})
-        form.button(btnName, addOrRemovePlayer, {"visible": playerNameInputVisibility})
+        form.divider()
+        permissionGetters['use'] = setupPermissionSection(
+            form, "谁可以使用此星塔", "可使用的玩家：", "private")
+        form.divider()
+        permissionGetters['teleport'] = setupPermissionSection(
+            form, "谁可以传送至此星塔", "可传送至此的玩家：", "private")
+        form.divider()
         if getStarTeam():
             form.toggle("是否设置为工会锚点", setIsTeamAnchor)
         form.divider()
@@ -857,7 +855,8 @@ def onItemUseOn(arg):
                 "scale": scale.getData(),
                 "location": (loc.x, loc.y, loc.z, player.dimension.dimId),
                 "owner": player.id,
-                "permissions": ["private", "public", players, "team"][permission.getData()],
+                "usePermissions": permissionGetters['use'](),
+                "teleportPermissions": permissionGetters['teleport'](),
                 "type": "sub",
                 "enable": True,
                 "nodes": {}
@@ -879,16 +878,19 @@ def onItemUseOn(arg):
         form.dropdown("星塔颜色", selected_color, colors)
         scale.setData(1)
         form.slider("星塔尺寸", scale, 1, 16)
-        form.dropdown("权限设置", permission, permissions)
-        form.label(currentPlayersInfo, {"visible": playerNameInputVisibility})
-        form.textField("玩家名称", playerName, {"visible": playerNameInputVisibility})
-        form.button(btnName, addOrRemovePlayer, {"visible": playerNameInputVisibility})
+        form.divider()
+        permissionGetters['use'] = setupPermissionSection(
+            form, "谁可以使用此星塔", "可使用的玩家：", "private")
+        form.divider()
+        permissionGetters['teleport'] = setupPermissionSection(
+            form, "谁可以传送至此星塔", "可传送至此的玩家：", "private")
+        form.divider()
         if getStarTeam():
             form.toggle("是否设置为工会锚点", setIsTeamAnchor)
         form.divider()
         form.button("创建星塔", onSubmit, {"visible": submit_visibility})
         form.show()
-        
+
     elif arg.itemStack.typeId == "elspirit:stars_controller":
         if arg.source.asPlayer().playerPermissionLevel == 2:
             import mod.server.extraServerApi as serverApi
@@ -1048,22 +1050,9 @@ def openStarPortalManager(arg):
     portal = world.getEntity(portalData['entityId'])
     # Manager
     # Observables
-    players = portalData['permissions']
-    if not isinstance(players, list):
-        players = []
-    permission = Observable.create(1 if portalData['permissions'] == 'public' else 0 if portalData['permissions'] == 'private' else 2, {"clientWritable": True})
-    playerName = Observable.create("", {"clientWritable": True})
-    playerNameInputVisibility = Observable.create(permission.getData() == 2, {"clientWritable": True})
-    info = "可使用的玩家：\n"
-    for pName in players:
-        info += pName + "\n"
-    if not players:
-        info += "无\n"
     portalName = Observable.create(portalData['name'], {"clientWritable": True})
     portalScale = Observable.create(portalData['scale'], {"clientWritable": True})
     portalColor = Observable.create(portalData['color'], {"clientWritable": True})
-    currentPlayersInfo = Observable.create(info)
-    btnName = Observable.create("添加玩家")
     linkableNodes = [{"label": "无", "value": 0}]# type: list[DropdownItem]
     for node in getAllLinkablePortals(player):
         if not getIsParent(portalData, node):
@@ -1074,26 +1063,7 @@ def openStarPortalManager(arg):
     parentData = getParentByEntityId(portal.id)
     parentNode = Observable.create(parentData['id'] if parentData else 0, {"clientWritable": True})
     isEnabled = Observable.create(portalData['enable'], {"clientWritable": True})
-    @permission.subscribe
-    def onPermissionChange(new_value):
-        playerNameInputVisibility.setData(new_value == 2)
-    @playerName.subscribe
-    def onPlayerNameChange(new_value):
-        btnName.setData("添加玩家" if new_value not in players else "§4移除玩家")
-    def addOrRemovePlayer():
-        if not playerName.getData():
-            return
-        if playerName.getData() in players:
-            players.remove(playerName.getData())
-        else:
-            players.append(playerName.getData())
-        info = "可使用的玩家：\n"
-        for pName in players:
-            info += pName + "\n"
-        if not players:
-            info += "无\n"
-        currentPlayersInfo.setData(info)
-        playerName.setData("")
+    permissionGetters = {}
 
     def submit():
         portal.nameTag = portalName.getData()
@@ -1102,10 +1072,9 @@ def openStarPortalManager(arg):
         portalData['name'] = portalName.getData()
         portalData['color'] = portalColor.getData()
         portalData['scale'] = portalScale.getData()
-        if permission.getData() == 2:
-            portalData['permissions'] = players
-        else:
-            portalData['permissions'] = ['private', "public"][permission.getData()]
+        portalData['usePermissions'] = permissionGetters['use']()
+        portalData['teleportPermissions'] = permissionGetters['teleport']()
+        portalData.pop('permissions', None)
         deletePortalData(portal.id, data)
         if parentNode.getData() == 0:
             data[portal.id] = portalData
@@ -1142,23 +1111,11 @@ def openStarPortalManager(arg):
     manager.slider("星塔尺寸", portalScale, 1, 16)
     manager.dropdown("星塔颜色", portalColor, colors)
     manager.divider()
-    manager.dropdown("权限设置", permission, [
-        {
-            "label": "公开",
-            "value": 1
-        },
-        {
-            "label": "私密",
-            "value": 0
-        },
-        {
-            "label": "指定玩家",
-            "value": 2
-        }
-    ])
-    manager.label(currentPlayersInfo, {"visible": playerNameInputVisibility})
-    manager.textField("玩家名称", playerName, {"visible": playerNameInputVisibility})
-    manager.button(btnName, addOrRemovePlayer, {"visible": playerNameInputVisibility})
+    permissionGetters['use'] = setupPermissionSection(
+        manager, "谁可以使用此星塔", "可使用的玩家：", getUsePermission(portalData))
+    manager.divider()
+    permissionGetters['teleport'] = setupPermissionSection(
+        manager, "谁可以传送至此星塔", "可传送至此的玩家：", getTeleportPermission(portalData))
     manager.divider()
     manager.dropdown("主星塔", parentNode, linkableNodes)
     manager.divider()
