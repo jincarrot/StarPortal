@@ -1,0 +1,33 @@
+{
+	"format_version": "1.10.0",
+	"minecraft:client_entity": {
+		"description": {
+			"identifier": "elspirit:multi_portal",
+			"materials": {
+				"default": "entity_emissive_alpha_one_sided"
+			},
+			"textures": {
+				"p0": "textures/entity/core_portal_0",
+				"p1": "textures/entity/core_portal_1",
+				"p2": "textures/entity/core_portal_2",
+				"p3": "textures/entity/core_portal_3",
+				"p4": "textures/entity/core_portal_4",
+				"p5": "textures/entity/core_portal_5",
+				"p6": "textures/entity/core_portal_6"
+			},
+			"geometry": {
+				"default": "geometry.core_portal"
+			},
+			"render_controllers": ["controller.render.portal"],
+			"animations": {
+				"idle": "animation.portal.idle"
+			},
+			"scripts": {
+				"animate": [
+					"idle"
+				],
+				"scale": "q.property('elspirit:scale') / 4.0"
+			}
+		}
+	}
+}

@@ -128,17 +128,18 @@
 		"components": {
 			"minecraft:physics": {
 				"has_gravity": false,
-				"has_collision": true
+				"has_collision": false
 			},
 			"minecraft:collision_box": {
 				"height": 0.6,
 				"width": 0.35
 			},
 			"minecraft:pushable": {
-				"is_pushable": false
+				"is_pushable": false,
+				"is_pushable_by_piston": false
 			},
 			"minecraft:push_through": {
-				"value": 1
+				"value": 0
 			},
 			"minecraft:interact": {
 				"interactions": [

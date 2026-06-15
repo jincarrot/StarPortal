@@ -57,13 +57,26 @@ class Config(object):
     CORE_ENTITY = "elspirit:core_portal"
     SUB_ENTITY = "elspirit:sub_portal"
     TEMP_ENTITY = "elspirit:temp_portal"
-    PORTAL_ENTITIES = [CORE_ENTITY, SUB_ENTITY, TEMP_ENTITY]
+    MULTI_ENTITY = "elspirit:multi_portal"  # 枢纽星塔：功能近似主星塔，但可连接多个父星塔
+    PORTAL_ENTITIES = [CORE_ENTITY, SUB_ENTITY, TEMP_ENTITY, MULTI_ENTITY]
     PORTAL_LIGHT_BLOCK = "sl:portal_light"
 
     CORE_ITEM = "elspirit:core_portal_item"
     SUB_ITEM = "elspirit:sub_portal_item"
+    MULTI_ITEM = "elspirit:multi_portal_item"
     CONTROLLER_ITEM = "elspirit:stars_controller"
     NETHER_STAR = "minecraft:nether_star"
+
+    # 枢纽星塔本体存储在独立的动态属性中，树里只放一个指向它的标识符(marker)。
+    # 标识符形如 "elspirit:ref:<portalId>"，world.getDynamicProperty(标识符) 即本体。
+    REF_PREFIX = "elspirit:ref:"
+
+    # 星塔类型 -> 实体标识符
+    TYPE_ENTITY = {
+        "core": CORE_ENTITY,
+        "sub": SUB_ENTITY,
+        "multi": MULTI_ENTITY,
+    }
 
     CONTROLLER_COOLDOWN = 2400  # tick
     NODE_MIN_SEPARATION = 0.3   # 相邻小水晶端点之间的最小间距（方块）
@@ -261,9 +274,9 @@ class EntityService(object):
             for dimId in range(3):
                 for portal in world.getDimension(dimId).getEntities():
                     if portal.typeId in Config.PORTAL_ENTITIES:
-                        comp.CreateControlAi(portal.id).SetBlockControlAi(False)
+                        system.runTimeout(lambda: comp.CreateControlAi(portal.id).SetBlockControlAi(False), 1)
         else:
-            comp.CreateControlAi(portalId).SetBlockControlAi(False)
+            system.runTimeout(lambda: comp.CreateControlAi(portalId).SetBlockControlAi(False), 1)
 
     @staticmethod
     def createTickingArea(portal):
@@ -314,14 +327,84 @@ class TeleportService(object):
 # 星塔数据仓库
 # ============================================================
 class PortalRepository(object):
+    """星塔数据仓库。
+
+    存储态是一棵"带引用"的树：枢纽星塔(type=='multi')在父节点的 nodes 里只放
+    一个标识符字符串(marker)，本体存在独立的动态属性中。load() 会把所有 marker
+    解析成内存中的共享同一引用，使整棵树升级为有向无环图(DAG)，让一个枢纽同时
+    挂在多个父下。save() 做逆操作：把共享的枢纽本体折叠回 marker 并写回各自属性。
+
+    因为是 DAG（且理论上可能成环），所有递归遍历都用 visited 集合(按 id(dict))
+    防止重复处理与死循环。
+    """
+
+    # ---------------- 引用解析 / 折叠 ----------------
+    @staticmethod
+    def _markerOf(portalData):
+        return Config.REF_PREFIX + str(portalData['id'])
+
     def load(self):
         # type: () -> dict
-        return world.getDynamicProperty(Config.PORTAL_PROPERTY) or {}
+        root = world.getDynamicProperty(Config.PORTAL_PROPERTY) or {}
+        self._resolveNodes(root, {})
+        return root
+
+    def _resolveNodes(self, nodeDict, cache):
+        """把 nodeDict 中的 marker 字符串原地替换为解析后的本体字典。
+        cache: marker -> 已解析本体，保证同一 marker 全程共享同一引用，并兼作环路防护。"""
+        for key in list(nodeDict.keys()):
+            value = nodeDict[key]
+            if isinstance(value, dict):
+                self._resolveNodes(value.get("nodes", {}), cache)
+                continue
+            # 非字典即为 marker 字符串
+            marker = value
+            if marker not in cache:
+                body = world.getDynamicProperty(marker)
+                if not body:
+                    # 引用已失效，丢弃该挂接
+                    del nodeDict[key]
+                    continue
+                cache[marker] = body          # 先入缓存再下钻 -> 环路安全
+                self._resolveNodes(body.get("nodes", {}), cache)
+            nodeDict[key] = cache[marker]
 
     def save(self, data):
         # type: (dict) -> None
-        world.setDynamicProperty(Config.PORTAL_PROPERTY, data)
+        hubBodies = {}
+        serialized = self._collapse(data, hubBodies, set())
+        for marker, body in hubBodies.items():
+            world.setDynamicProperty(marker, body)
+        world.setDynamicProperty(Config.PORTAL_PROPERTY, serialized)
 
+    def _collapse(self, nodeDict, hubBodies, inProgress):
+        """返回 nodeDict 的"序列化副本"：枢纽本体替换为 marker，并把（折叠后的）
+        枢纽本体收集到 hubBodies。inProgress 防止环路时无限递归。"""
+        out = {}
+        for key, value in nodeDict.items():
+            if not isinstance(value, dict):
+                out[key] = value  # 已是 marker，原样保留
+                continue
+            if value.get('type') == 'multi':
+                marker = self._markerOf(value)
+                out[key] = marker
+                if marker not in hubBodies and marker not in inProgress:
+                    inProgress.add(marker)
+                    body = dict(value)
+                    body['nodes'] = self._collapse(value.get("nodes", {}), hubBodies, inProgress)
+                    hubBodies[marker] = body
+            else:
+                body = dict(value)
+                body['nodes'] = self._collapse(value.get("nodes", {}), hubBodies, inProgress)
+                out[key] = body
+        return out
+
+    def clearHubProperty(self, portalData):
+        """彻底删除枢纽时清空其本体属性，避免遗留垃圾。"""
+        if portalData.get('type') == 'multi':
+            world.setDynamicProperty(self._markerOf(portalData), {})
+
+    # ---------------- 基础读写 ----------------
     def nextId(self):
         # type: () -> int
         portalId = (world.getDynamicProperty(Config.PORTAL_ID_PROPERTY) or 0) + 1
@@ -333,8 +416,12 @@ class PortalRepository(object):
         if data is None:
             data = self.load()
         result = []
+        visited = set()
 
         def add(portalData):
+            if id(portalData) in visited:
+                return
+            visited.add(id(portalData))
             result.append(portalData)
             for node in portalData.get("nodes", {}).values():
                 add(node)
@@ -342,106 +429,164 @@ class PortalRepository(object):
             add(portalData)
         return result
 
-    def findById(self, portalId, data=None):
-        # type: (int, dict | None) -> dict | None
+    def findById(self, portalId, data=None, visited=None):
+        # type: (int, dict | None, set | None) -> dict | None
         if data is None:
             data = self.load()
+        if visited is None:
+            visited = set()
         for portalData in data.values():
+            if id(portalData) in visited:
+                continue
+            visited.add(id(portalData))
             if portalData['id'] == portalId:
                 return portalData
-            result = self.findById(portalId, portalData.get("nodes", {}))
+            result = self.findById(portalId, portalData.get("nodes", {}), visited)
             if result:
                 return result
         return None
 
-    def findByEntityId(self, entityId, data=None):
-        # type: (int, dict | None) -> dict | None
+    def findByEntityId(self, entityId, data=None, visited=None):
+        # type: (int, dict | None, set | None) -> dict | None
         if data is None:
             data = self.load()
+        if visited is None:
+            visited = set()
         for key, portalData in data.items():
             if key == entityId:
                 return portalData
-            result = self.findByEntityId(entityId, portalData.get("nodes", {}))
+            if id(portalData) in visited:
+                continue
+            visited.add(id(portalData))
+            result = self.findByEntityId(entityId, portalData.get("nodes", {}), visited)
             if result:
                 return result
         return None
+
+    def findParents(self, entityId, data=None, visited=None):
+        # type: (int, dict | None, set | None) -> list[dict]
+        """返回所有把该实体id作为子节点的父星塔（枢纽星塔可能有多个父）。"""
+        if data is None:
+            data = self.load()
+        if visited is None:
+            visited = set()
+        parents = []
+        for portalData in data.values():
+            if id(portalData) in visited:
+                continue
+            visited.add(id(portalData))
+            if entityId in portalData.get("nodes", {}):
+                parents.append(portalData)
+            parents += self.findParents(entityId, portalData.get("nodes", {}), visited)
+        return parents
 
     def findParent(self, entityId, data=None):
         # type: (int, dict | None) -> dict | None
-        """返回包含该实体id作为子节点的星塔（正确地递归整棵树）。"""
-        if data is None:
-            data = self.load()
-        for portalData in data.values():
-            if entityId in portalData.get("nodes", {}):
-                return portalData
-            result = self.findParent(entityId, portalData.get("nodes", {}))
-            if result:
-                return result
-        return None
+        """返回任一父星塔（普通星塔只有一个父；枢纽用 findParents）。"""
+        parents = self.findParents(entityId, data)
+        return parents[0] if parents else None
 
-    def isAncestor(self, ancestor, node):
-        # type: (dict, dict) -> bool
-        """ancestor 是否为 node 自身或其祖先。"""
+    def isAncestor(self, ancestor, node, visited=None):
+        # type: (dict, dict, set | None) -> bool
+        """ancestor 是否为 node 自身或其祖先（即 node 在 ancestor 的子树内）。"""
+        if visited is None:
+            visited = set()
+        if id(ancestor) in visited:
+            return False
+        visited.add(id(ancestor))
         if ancestor['id'] == node['id']:
             return True
         for child in ancestor.get("nodes", {}).values():
-            if self.isAncestor(child, node):
+            if self.isAncestor(child, node, visited):
                 return True
         return False
 
-    def delete(self, entityId, data=None):
-        # type: (int, dict | None) -> bool
+    def delete(self, entityId, data=None, visited=None):
+        # type: (int, dict | None, set | None) -> bool
+        """从树中移除该实体id的所有挂接（枢纽可能挂在多个父下，全部移除）。"""
         if data is None:
             data = self.load()
-        for key in list(data.keys()):
-            if key == entityId:
-                del data[key]
-                return True
-            if self.delete(entityId, data[key].get("nodes", {})):
-                return True
-        return False
+        if visited is None:
+            visited = set()
+        removed = False
+        if entityId in data:
+            del data[entityId]
+            removed = True
+        for portalData in list(data.values()):
+            if id(portalData) in visited:
+                continue
+            visited.add(id(portalData))
+            if self.delete(entityId, portalData.get("nodes", {}), visited):
+                removed = True
+        return removed
 
-    def linkablePortals(self, player, data=None):
-        # type: (Player, dict | None) -> list[dict]
+    def linkablePortals(self, player, data=None, visited=None):
+        # type: (Player, dict | None, set | None) -> list[dict]
         result = []
         if data is None:
             data = self.load()
+        if visited is None:
+            visited = set()
         for portalData in data.values():
+            if id(portalData) in visited:
+                continue
+            visited.add(id(portalData))
             if Permissions.isLinkable(portalData, player):
                 result.append(portalData)
-            result += self.linkablePortals(player, portalData.get("nodes", {}))
+            result += self.linkablePortals(player, portalData.get("nodes", {}), visited)
         return result
 
-    def repair(self, data=None, parent=None):
-        # type: (dict | None, dict | None) -> None
-        """重建缺失的星塔实体并修正数据键。只在最顶层持久化一次完整的树，
-        避免把子树片段写回根属性。"""
-        isRoot = data is None
-        if data is None:
-            data = self.load()
-        for entityId in list(data.keys()):
-            portalData = data[entityId]
-            dimension = world.getDimension(portalData['location'][3])
-            portal = world.getEntity(entityId)
-            if not portal or not portal.isValid:
-                portal = dimension.spawnEntity(
-                    "elspirit:%s_portal" % portalData['type'], portalData['location'][:3:])
-                EntityService.createTickingArea(portal)
-                EntityService.disableAI(portal.id)
-            portal.teleport(portalData['location'][:3:], {"dimension": dimension})
-            if portalData['type'] == 'sub' and parent:
-                portal.nameTag = "%s\n前往[%s]" % (portalData['name'], parent['name'])
-            else:
-                portal.nameTag = portalData['name']
-            portal.setProperty("elspirit:color", portalData['color'])
-            portal.setProperty("elspirit:scale", portalData['scale'])
-            self.repair(portalData.get("nodes", {}), portalData)
-            if portal.id != entityId:
-                portalData['entityId'] = portal.id
-                del data[entityId]
-                data[portal.id] = portalData
-        if isRoot:
-            self.save(data)
+    def repair(self):
+        # type: () -> None
+        """重建缺失的星塔实体并修正数据键（DAG 安全）。"""
+        data = self.load()
+        remap = {}        # 旧 entityId -> 新 entityId
+        processed = set()  # id(portalData)
+
+        def process(nodeDict, parent):
+            for key in list(nodeDict.keys()):
+                portalData = nodeDict[key]
+                if id(portalData) in processed:
+                    continue
+                processed.add(id(portalData))
+                dimension = world.getDimension(portalData['location'][3])
+                portal = world.getEntity(portalData['entityId'])
+                if not portal or not portal.isValid:
+                    entityType = Config.TYPE_ENTITY.get(portalData['type'], Config.CORE_ENTITY)
+                    portal = dimension.spawnEntity(entityType, portalData['location'][:3:])
+                    EntityService.createTickingArea(portal)
+                    EntityService.disableAI(portal.id)
+                portal.teleport(portalData['location'][:3:], {"dimension": dimension})
+                if portalData['type'] == 'sub' and parent:
+                    portal.nameTag = "%s\n前往[%s]" % (portalData['name'], parent['name'])
+                else:
+                    portal.nameTag = portalData['name']
+                portal.setProperty("elspirit:color", portalData['color'])
+                portal.setProperty("elspirit:scale", portalData['scale'])
+                if portal.id != portalData['entityId']:
+                    remap[portalData['entityId']] = portal.id
+                    portalData['entityId'] = portal.id
+                process(portalData.get("nodes", {}), portalData)
+        process(data, None)
+
+        # 实体id变化后，更新所有容器里的键（枢纽的键可能出现在多个父下）
+        if remap:
+            rekeyed = set()
+
+            def rekey(nodeDict):
+                if id(nodeDict) in rekeyed:
+                    return
+                rekeyed.add(id(nodeDict))
+                for oldKey in list(nodeDict.keys()):
+                    child = nodeDict[oldKey]
+                    newKey = remap.get(oldKey, oldKey)
+                    if newKey != oldKey:
+                        del nodeDict[oldKey]
+                        nodeDict[newKey] = child
+                    rekey(child.get("nodes", {}))
+            rekey(data)
+
+        self.save(data)
 
 
 # ============================================================
@@ -496,6 +641,58 @@ class PermissionSection(object):
         if self._permission.getData() == 2:
             return list(self._players)
         return ['private', "public"][self._permission.getData()]
+
+
+# ============================================================
+# 表单：多父星塔编辑区块（枢纽星塔专用）
+# ============================================================
+class ParentSection(object):
+    """在表单上渲染一个"多选父星塔"区块：一个下拉选择候选父星塔，一个按钮把当前
+    选中项加入/移出已选集合，一段文本展示已选父星塔。result() 返回已选父星塔id列表。"""
+
+    def __init__(self, form, candidates, initialParentIds):
+        # candidates: list[{"label": name, "value": portalId}]
+        self._candidates = candidates
+        self._chosen = set(initialParentIds)
+        self._selection = Observable.create(0, {"clientWritable": True})
+        self._info = Observable.create(self._buildInfo())
+        form.label("枢纽星塔可连接多个父星塔：")
+        if candidates:
+            form.dropdown("选择父星塔", self._selection, candidates)
+            form.button("添加/移除选中的父星塔", self._toggle)
+        else:
+            form.label("§7（当前没有可作为父星塔的星塔）")
+        form.label(self._info)
+
+    def _labelOf(self, portalId):
+        for candidate in self._candidates:
+            if candidate['value'] == portalId:
+                return candidate['label']
+        return str(portalId)
+
+    def _buildInfo(self):
+        info = "已选父星塔：\n"
+        for portalId in self._chosen:
+            info += self._labelOf(portalId) + "\n"
+        if not self._chosen:
+            info += "无\n"
+        return info
+
+    def _toggle(self):
+        if not self._candidates:
+            return
+        portalId = self._candidates[self._selection.getData()]['value']
+        if portalId in self._chosen:
+            self._chosen.remove(portalId)
+        else:
+            self._chosen.add(portalId)
+        self._info.setData(self._buildInfo())
+
+    def hasAny(self):
+        return bool(self._chosen)
+
+    def result(self):
+        return list(self._chosen)
 
 
 # ============================================================
@@ -579,24 +776,39 @@ class StarMapService(object):
         # type: (Player) -> dict
         """收集该玩家可见（可传送至）的星塔，连同其在网络中的父节点id一起下发，
         供客户端绘制星座连线。"""
-        portals = []
+        entries = {}     # portalId -> 下发条目（含累计的多个父id）
+        visited = set()  # id(portalData)，DAG/环路防护
 
         def walk(nodeDict, parentId):
             for entityId, portalData in nodeDict.items():
-                if entityId == "father" or not isinstance(portalData, dict):
+                if not isinstance(portalData, dict):
                     continue
+                pid = portalData['id']
                 if Permissions.canTeleportTo(portalData, player):
-                    portals.append({
-                        "id": portalData['id'],
-                        "name": portalData['name'],
-                        "color": portalData.get('color', 0),
-                        "type": portalData['type'],
-                        "location": portalData['location'],
-                        "enable": portalData.get('enable', True),
-                        "parentId": parentId,
-                    })
-                walk(portalData.get("nodes", {}), portalData['id'])
+                    entry = entries.get(pid)
+                    if entry is None:
+                        entry = {
+                            "id": pid,
+                            "name": portalData['name'],
+                            "color": portalData.get('color', 0),
+                            "type": portalData['type'],
+                            "location": portalData['location'],
+                            "enable": portalData.get('enable', True),
+                            "parentIds": [],
+                        }
+                        entries[pid] = entry
+                    if parentId and parentId not in entry["parentIds"]:
+                        entry["parentIds"].append(parentId)
+                # 子树只下钻一次（枢纽被多个父引用时避免重复/死循环）
+                if id(portalData) in visited:
+                    continue
+                visited.add(id(portalData))
+                walk(portalData.get("nodes", {}), pid)
         walk(self._repo.load(), 0)
+        portals = []
+        for entry in entries.values():
+            entry["parentId"] = entry["parentIds"][0] if entry["parentIds"] else 0
+            portals.append(entry)
         loc = player.location
         return {"portals": portals, "center": [loc.x, loc.z], "dimId": player.dimension.dimId}
 
@@ -687,7 +899,8 @@ class StarPortalSystem(object):
 
     def _dispatchInteract(self, actor, target):
         typeId = target.typeId
-        if typeId == Config.CORE_ENTITY:
+        if typeId in (Config.CORE_ENTITY, Config.MULTI_ENTITY):
+            # 枢纽星塔功能与主星塔基本相同，复用同一交互逻辑
             self.onInteractCorePortal(actor, target)
         elif typeId == Config.TEMP_ENTITY:
             self.onInteractTempPortal(actor, target)
@@ -696,7 +909,7 @@ class StarPortalSystem(object):
 
     def onEntityDie(self, arg):
         # type: (EntityDieAfterEvent) -> None
-        if arg.deadEntity.typeId in [Config.CORE_ENTITY, Config.SUB_ENTITY]:
+        if arg.deadEntity.typeId in [Config.CORE_ENTITY, Config.SUB_ENTITY, Config.MULTI_ENTITY]:
             self.repo.repair()
 
     # ------------------------------------------------------------------
@@ -730,9 +943,10 @@ class StarPortalSystem(object):
             return
 
         portal.setDynamicProperty("elspirit:is_using", True)
+        refundItem = Config.MULTI_ITEM if portal.typeId == Config.MULTI_ENTITY else Config.CORE_ITEM
         portalData = self.repo.findByEntityId(portal.id)
         if not portalData:
-            self._showCorruptForm(player, portal, Config.CORE_ITEM)
+            self._showCorruptForm(player, portal, refundItem)
             return
         portalId = portalData['id']
         if not Permissions.isUsable(portalData, player):
@@ -741,19 +955,23 @@ class StarPortalSystem(object):
         if not portalData['enable']:
             player.sendMessage("§c此星塔已被禁用！")
             return
-        if not portalData['nodes'] and not self.repo.findParent(portal.id):
+        # 枢纽星塔可能有多个父
+        parents = self.repo.findParents(portal.id)
+        if not portalData['nodes'] and not parents:
             player.sendMessage("没有可连接的星塔!")
             return
 
-        # 是否有任意可到达的目的地
+        # 是否有任意可到达的目的地（子节点或任一父节点）
         canUse = False
         for node in portalData['nodes'].values():
             if Permissions.canTeleportTo(node, player):
                 canUse = True
                 break
-        parent = self.repo.findParent(portal.id)
-        if parent and Permissions.canTeleportTo(parent, player):
-            canUse = True
+        if not canUse:
+            for parent in parents:
+                if Permissions.canTeleportTo(parent, player):
+                    canUse = True
+                    break
         if not canUse:
             player.sendMessage("没有可连接的星塔!")
             return
@@ -763,9 +981,11 @@ class StarPortalSystem(object):
             "location": portal.location.getTuple(),
             "shouldShowManager": portalData['owner'] == player.id})
 
-        # 把父星塔以临时 "father" 节点的形式加入，使其也能作为传送终点显示
-        if parent:
-            portalData['nodes']["father"] = {
+        # 把每个父星塔以临时 "father_<id>" 节点的形式加入，使其也能作为传送终点显示
+        fatherKeys = []
+        for parent in parents:
+            key = "father_%s" % parent['id']
+            portalData['nodes'][key] = {
                 "id": parent['id'],
                 "name": parent['name'],
                 "color": parent['color'],
@@ -777,15 +997,19 @@ class StarPortalSystem(object):
                 "type": parent['type'],
                 "nodes": {},
             }
+            fatherKeys.append(key)
 
         self._spawnStarNetwork(player, portal, portalData, portalId)
 
-        if portalData['nodes'].get("father"):
-            del portalData['nodes']["father"]
+        for key in fatherKeys:
+            portalData['nodes'].pop(key, None)
 
     def _spawnStarNetwork(self, player, portal, portalData, portalId):
         """生成星线与终点小水晶实体，并启动靠近检测定时器。"""
-        def getMaxDistance(node, ori):
+        def getMaxDistance(node, ori, visited):
+            if id(node) in visited:  # DAG/环路防护
+                return 0
+            visited.add(id(node))
             maxLength = 0
             for subNode in node['nodes'].values():
                 tar = {"x": subNode['location'][0], "y": subNode['location'][1], "z": subNode['location'][2]}
@@ -793,15 +1017,16 @@ class StarPortalSystem(object):
                 length = math.sqrt(d["x"] ** 2 + d["y"] ** 2 + d["z"] ** 2)
                 if length > maxLength:
                     maxLength = length
-                subLength = getMaxDistance(subNode, ori)
+                subLength = getMaxDistance(subNode, ori, visited)
                 if subLength > maxLength:
                     maxLength = subLength
             return maxLength
 
-        maxLength = getMaxDistance(portalData, portal.location)
+        maxLength = getMaxDistance(portalData, portal.location, set())
         if maxLength <= 0:
             maxLength = 1.0  # 防止除零
         interactions = []
+        expanded = set([id(portalData)])  # 已展开子节点的星塔，DAG/环路防护
 
         def spawnNodes(ori, parentData):
             ori = {"x": ori.x, "y": ori.y, "z": ori.z}
@@ -855,7 +1080,8 @@ class StarPortalSystem(object):
                 if player in others:
                     others.remove(player)
                 system.sendToClient(others, "hideNode", entity.id)
-                if node['nodes']:
+                if node['nodes'] and id(node) not in expanded:
+                    expanded.add(id(node))
                     spawnNodes(entity.location, node)
 
         spawnNodes(portal.location, portalData)
@@ -1094,9 +1320,11 @@ class StarPortalSystem(object):
         player = arg.source.asPlayer()
         itemType = arg.itemStack.typeId
         if itemType == Config.CORE_ITEM:
-            self._showCreatePortalForm(arg, player, isCore=True)
+            self._showCreatePortalForm(arg, player, "core")
         elif itemType == Config.SUB_ITEM:
-            self._showCreatePortalForm(arg, player, isCore=False)
+            self._showCreatePortalForm(arg, player, "sub")
+        elif itemType == Config.MULTI_ITEM:
+            self._showCreatePortalForm(arg, player, "multi")
         elif itemType == Config.CONTROLLER_ITEM:
             if player.playerPermissionLevel == 2:
                 self._showAdminController(arg)
@@ -1116,32 +1344,35 @@ class StarPortalSystem(object):
         loc.z += 0.5
         return loc
 
-    def _showCreatePortalForm(self, arg, player, isCore):
+    def _showCreatePortalForm(self, arg, player, kind):
+        # kind: "core" | "sub" | "multi"
+        isCore, isSub, isMulti = kind == "core", kind == "sub", kind == "multi"
         portalName = Observable.create("", {"clientWritable": True})
         portalColor = Observable.create(0, {"clientWritable": True})
-        scale = Observable.create(4 if isCore else 1, {"clientWritable": True})
+        scale = Observable.create(1 if isSub else 4, {"clientWritable": True})
         submitVisibility = Observable.create(False)
-        parentNode = Observable.create(0, {"clientWritable": True})
+        parentNode = Observable.create(0, {"clientWritable": True})  # 单父（core/sub）
         anchorToggle = Observable.create(False, {"clientWritable": True})
 
-        nodes = [{"label": "无", "value": 0}]  # type: list[DropdownItem]
-        for node in self.repo.linkablePortals(player):
-            nodes.append({"label": node['name'], "value": node['id']})
+        candidates = [{"label": node['name'], "value": node['id']} for node in self.repo.linkablePortals(player)]
+        nodes = [{"label": "无", "value": 0}] + candidates
 
-        if isCore:
-            def onNameChange(new_value):
-                submitVisibility.setData(new_value != "")
-            portalName.subscribe(onNameChange)
-        else:
+        if isSub:
             def onChange(new_value):
                 submitVisibility.setData(bool(parentNode.getData()) and bool(portalName.getData()))
             portalName.subscribe(onChange)
             parentNode.subscribe(onChange)
+        else:
+            def onNameChange(new_value):
+                submitVisibility.setData(new_value != "")
+            portalName.subscribe(onNameChange)
 
-        entityType = Config.CORE_ENTITY if isCore else Config.SUB_ENTITY
-        portalType = "core" if isCore else "sub"
+        entityType = Config.TYPE_ENTITY[kind]
 
         def onSubmit():
+            if isMulti and not parentSection.hasAny():
+                player.sendMessage("§c枢纽星塔至少需要选择一个父星塔！")
+                return
             form.close()
             item = player.mainHand
             item.amount -= 1
@@ -1152,10 +1383,7 @@ class StarPortalSystem(object):
             portal.setProperty("elspirit:scale", scale.getData())
             portalId = self.repo.nextId()
             data = self.repo.load()
-            parent = self.repo.findById(parentNode.getData(), data)
-            container = parent if parent else {"nodes": data}
-            container.setdefault("nodes", {})
-            container['nodes'][portal.id] = {
+            body = {
                 "entityId": portal.id,
                 "id": portalId,
                 "name": portalName.getData(),
@@ -1165,14 +1393,27 @@ class StarPortalSystem(object):
                 "owner": player.id,
                 "usePermissions": useSection.result(),
                 "teleportPermissions": teleportSection.result(),
-                "type": portalType,
+                "type": kind,
                 "enable": True,
                 "nodes": {},
             }
-            if isCore:
+            if isMulti:
+                # 同一本体对象挂到每个选中的父下，save() 会折叠成 marker
+                for parentId in parentSection.result():
+                    parent = self.repo.findById(parentId, data)
+                    if parent:
+                        parent.setdefault("nodes", {})
+                        parent['nodes'][portal.id] = body
                 portal.nameTag = portalName.getData()
             else:
-                portal.nameTag = "%s\n前往[%s]" % (portalName.getData(), parent['name'] if parent else "?")
+                parent = self.repo.findById(parentNode.getData(), data)
+                container = parent if parent else {"nodes": data}
+                container.setdefault("nodes", {})
+                container['nodes'][portal.id] = body
+                if isSub:
+                    portal.nameTag = "%s\n前往[%s]" % (portalName.getData(), parent['name'] if parent else "?")
+                else:
+                    portal.nameTag = portalName.getData()
             self.repo.save(data)
             EntityService.createTickingArea(portal)
             EntityService.disableAI(portal.id)
@@ -1189,7 +1430,7 @@ class StarPortalSystem(object):
             form.dropdown("星塔颜色", portalColor, Config.COLORS)
             form.slider("星塔尺寸", scale, 1, 16)
             form.dropdown("主星塔", parentNode, nodes)
-        else:
+        elif isSub:
             form = CustomForm.create(player, "创建子星塔")
             form.label("""§b§l子星塔§r是一个星塔网络的§b§l终点水晶§r，\n
 您需要先放置§b§l主晶塔（使用星核）§r并设置子晶塔所属的主星塔以使用传送。\n
@@ -1199,6 +1440,17 @@ class StarPortalSystem(object):
             form.textField("星塔名称", portalName)
             form.dropdown("星塔颜色", portalColor, Config.COLORS)
             form.slider("星塔尺寸", scale, 1, 16)
+        else:  # multi
+            form = CustomForm.create(player, "创建枢纽星塔")
+            form.label("""§b§l枢纽星塔§r功能与§b§l主星塔§r基本相同，但§b§l可以同时连接多个父星塔§r，\n
+用于把多个星塔网络汇聚到一起。\n
+放置后需至少选择一个父星塔。""")
+            form.divider()
+            form.textField("星塔名称", portalName)
+            form.dropdown("星塔颜色", portalColor, Config.COLORS)
+            form.slider("星塔尺寸", scale, 1, 16)
+            form.divider()
+            parentSection = ParentSection(form, candidates, [])
 
         form.divider()
         useSection = PermissionSection(form, "谁可以使用此星塔", "可使用的玩家：", "private")
@@ -1230,17 +1482,19 @@ class StarPortalSystem(object):
             for index, target in enumerate(world.getAllPlayers()):
                 playerList.append({"label": target.name, "value": index, "extra": target.id})
             playerSelection = Observable.create(0, {"clientWritable": True})
-            itemTypes = [{"label": "主星塔", "value": 0}, {"label": "子星塔", "value": 1}]
+            itemTypes = [{"label": "主星塔", "value": 0}, {"label": "子星塔", "value": 1}, {"label": "枢纽星塔", "value": 2}]
+            giveItems = [Config.CORE_ITEM, Config.SUB_ITEM, Config.MULTI_ITEM]
+            giveNames = ["主星塔", "子星塔", "枢纽星塔"]
             itemSelection = Observable.create(0, {"clientWritable": True})
             amount = Observable.create(1, {"clientWritable": True})
 
             def onSubmit():
                 giveForm.close()
                 target = world.getEntity(playerList[playerSelection.getData()]['extra']).asPlayer()
-                itemId = [Config.CORE_ITEM, Config.SUB_ITEM][itemSelection.getData()]
+                itemId = giveItems[itemSelection.getData()]
                 target.container.addItem(ItemStack(itemId, amount.getData()))
                 target.sendMessage("已收到管理员[%s]赠与的%s个%s！" % (
-                    admin.name, amount.getData(), ["主星塔", "子星塔"][itemSelection.getData()]))
+                    admin.name, amount.getData(), giveNames[itemSelection.getData()]))
             giveForm.dropdown("选择玩家", playerSelection, playerList)
             giveForm.dropdown("选择星塔类型", itemSelection, itemTypes)
             giveForm.slider("数量", amount, 1, 64)
@@ -1266,19 +1520,25 @@ class StarPortalSystem(object):
             def deletePortal(portalData):
                 deleteForm.close()
                 portalsNeedDel = world.getDynamicProperty(Config.PENDING_DELETE_PROPERTY) or []
-                tree = {portalData['entityId']: portalData}
+                visited = set()
 
                 def removeTree(nodeDict):
-                    for entityId in nodeDict:
-                        admin.sendMessage("星塔[%s]已删除" % nodeDict[entityId]['name'])
+                    for entityId in list(nodeDict.keys()):
+                        child = nodeDict[entityId]
+                        if id(child) in visited:  # DAG/环路防护
+                            continue
+                        visited.add(id(child))
+                        admin.sendMessage("星塔[%s]已删除" % child['name'])
                         portal = world.getEntity(entityId)
                         if portal and portal.isValid:
                             EntityService.clearPortalLight(portal)
                             portal.remove()
                         else:
                             portalsNeedDel.append(entityId)
-                        removeTree(nodeDict[entityId]['nodes'])
-                removeTree(tree)
+                        if child.get('type') == 'multi':
+                            self.repo.clearHubProperty(child)
+                        removeTree(child.get('nodes', {}))
+                removeTree({portalData['entityId']: portalData})
                 world.setDynamicProperty(Config.PENDING_DELETE_PROPERTY, portalsNeedDel)
                 data = self.repo.load()
                 self.repo.delete(portalData['entityId'], data)
@@ -1301,9 +1561,8 @@ class StarPortalSystem(object):
                 visibility.setData(False)
                 info.setData("数据清空完成！")
                 self.repo.save({})
-                admin.dimension.runCommand("kill @e[type=%s]" % Config.CORE_ENTITY)
-                admin.dimension.runCommand("kill @e[type=%s]" % Config.SUB_ENTITY)
-                admin.dimension.runCommand("kill @e[type=%s]" % Config.TEMP_ENTITY)
+                for entityType in Config.PORTAL_ENTITIES:
+                    admin.dimension.runCommand("kill @e[type=%s]" % entityType)
             alert = CustomForm.create(admin, "数据修复")
             alert.label(info)
             alert.button("点击开始修复", doRepair, {"visible": visibility})
@@ -1371,15 +1630,23 @@ class StarPortalSystem(object):
         portalName = Observable.create(portalData['name'], {"clientWritable": True})
         portalScale = Observable.create(portalData['scale'], {"clientWritable": True})
         portalColor = Observable.create(portalData['color'], {"clientWritable": True})
-        linkableNodes = [{"label": "无", "value": 0}]  # type: list[DropdownItem]
+        isMulti = portalData['type'] == 'multi'
+        # 候选父星塔：可连接、且不是自身或自身的后代（防止成环）
+        candidates = []  # type: list[DropdownItem]
         for node in self.repo.linkablePortals(player):
             if not self.repo.isAncestor(portalData, node):
-                linkableNodes.append({"label": node['name'], "value": node['id']})
-        parentData = self.repo.findParent(portal.id)
-        parentNode = Observable.create(parentData['id'] if parentData else 0, {"clientWritable": True})
+                candidates.append({"label": node['name'], "value": node['id']})
+        parentNode = None
+        if isMulti:
+            currentParentIds = [p['id'] for p in self.repo.findParents(portal.id)]
+        else:
+            linkableNodes = [{"label": "无", "value": 0}] + candidates
+            parentData = self.repo.findParent(portal.id)
+            parentNode = Observable.create(parentData['id'] if parentData else 0, {"clientWritable": True})
         isEnabled = Observable.create(portalData['enable'], {"clientWritable": True})
 
-        manager = CustomForm.create(player, "星塔管理", {"closable": False, "movable": True, "resizable": True})
+        managerTitle = "枢纽星塔管理" if isMulti else "星塔管理"
+        manager = CustomForm.create(player, managerTitle, {"closable": False, "movable": True, "resizable": True})
         manager.textField("星塔名称", portalName)
         manager.slider("星塔尺寸", portalScale, 1, 16)
         manager.dropdown("星塔颜色", portalColor, Config.COLORS)
@@ -1388,7 +1655,10 @@ class StarPortalSystem(object):
         manager.divider()
         teleportSection = PermissionSection(manager, "谁可以传送至此星塔", "可传送至此的玩家：", Permissions.teleport(portalData))
         manager.divider()
-        manager.dropdown("主星塔", parentNode, linkableNodes)
+        if isMulti:
+            parentSection = ParentSection(manager, candidates, currentParentIds)
+        else:
+            manager.dropdown("主星塔", parentNode, linkableNodes)
         manager.divider()
         manager.toggle("是否启用", isEnabled)
         manager.divider()
@@ -1398,6 +1668,9 @@ class StarPortalSystem(object):
         isEnabled.subscribe(onEnableChange)
 
         def submit():
+            if isMulti and not parentSection.hasAny():
+                player.sendMessage("§c枢纽星塔至少需要保留一个父星塔！")
+                return
             portal.nameTag = portalName.getData()
             portal.setProperty("elspirit:color", portalColor.getData())
             portal.setProperty("elspirit:scale", portalScale.getData())
@@ -1407,8 +1680,14 @@ class StarPortalSystem(object):
             portalData['usePermissions'] = useSection.result()
             portalData['teleportPermissions'] = teleportSection.result()
             portalData.pop('permissions', None)
-            self.repo.delete(portal.id, data)
-            if parentNode.getData() == 0:
+            self.repo.delete(portal.id, data)  # 先摘掉所有旧挂接，再按新选择重挂
+            if isMulti:
+                for parentId in parentSection.result():
+                    parent = self.repo.findById(parentId, data)
+                    if parent:
+                        parent.setdefault("nodes", {})
+                        parent['nodes'][portal.id] = portalData
+            elif parentNode.getData() == 0:
                 data[portal.id] = portalData
             else:
                 targetNode = self.repo.findById(parentNode.getData(), data)
@@ -1428,12 +1707,15 @@ class StarPortalSystem(object):
                 EntityService.clearPortalLight(portal)
                 portal.remove()
                 self.repo.delete(portal.id, data)
+                if isMulti:
+                    self.repo.clearHubProperty(portalData)
                 self.stopInteraction(player)
                 self.repo.save(data)
                 alert.close()
-                player.container.addItem(ItemStack(Config.CORE_ITEM, 1))
+                player.container.addItem(ItemStack(Config.MULTI_ITEM if isMulti else Config.CORE_ITEM, 1))
             alert = CustomForm.create(player, "删除星塔")
-            alert.label("§c您确定要删除这个星塔吗？§r\n删除后将无法使用这个星塔进行传送\n")
+            hint = "§c枢纽星塔会从所有父星塔处一并删除。§r\n" if isMulti else ""
+            alert.label("§c您确定要删除这个星塔吗？§r\n%s删除后将无法使用这个星塔进行传送\n" % hint)
             alert.button("取消", alert.close)
             alert.button("删除", action)
             alert.show()
@@ -1535,16 +1817,22 @@ class StarPortalSystem(object):
                 remaining.append(portalId)
         world.setDynamicProperty(Config.PENDING_DELETE_PROPERTY, remaining)
 
-    def _applyEffects(self, data=None):
+    def _applyEffects(self, data=None, visited=None):
         if data is None:
             data = self.repo.load()
+        if visited is None:
+            visited = set()
         for portalId in data:
             portalData = data[portalId]
+            if id(portalData) in visited:  # 枢纽被多个父引用，只处理一次
+                continue
+            visited.add(id(portalData))
             location = portalData['location']
             world.getDimension(location[3]).setBlockType(location[:3], Config.PORTAL_LIGHT_BLOCK)
-            if portalData['type'] == 'core' and portalData['enable']:
+            # 枢纽星塔与主星塔一样可承载领域增益
+            if portalData['type'] in ('core', 'multi') and portalData['enable']:
                 self._applyCoreEffects(portalData)
-            self._applyEffects(portalData.get("nodes", {}))
+            self._applyEffects(portalData.get("nodes", {}), visited)
 
     def _applyCoreEffects(self, portalData):
         effects = portalData.get("effects", {})
@@ -1569,16 +1857,21 @@ class StarPortalSystem(object):
     # ------------------------------------------------------------------
     # 常加载区域初始化
     # ------------------------------------------------------------------
-    def initialNodes(self, nodes=None):
+    def initialNodes(self, nodes=None, visited=None):
         if nodes is None:
             nodes = self.repo.load()
+        if visited is None:
+            visited = set()
         for portalId in nodes:
             portalData = nodes[portalId]
+            if id(portalData) in visited:  # DAG/环路防护
+                continue
+            visited.add(id(portalData))
             location = portalData['location']
             dimension = world.getDimension(location[3])
             world.tickingAreaManager.createTickingArea(
                 portalId, {"dimension": dimension, "from": location, "to": location})
-            self.initialNodes(portalData.get("nodes", {}))
+            self.initialNodes(portalData.get("nodes", {}), visited)
 
     # ------------------------------------------------------------------
     # 调试后门（聊天指令）

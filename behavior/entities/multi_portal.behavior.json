@@ -2,7 +2,7 @@
 	"format_version": "1.21.90",
 	"minecraft:entity": {
 		"description": {
-			"identifier": "elspirit:temp_portal",
+			"identifier": "elspirit:multi_portal",
 			"is_spawnable": false,
 			"is_summonable": true,
 			"is_experimental": false,
@@ -139,17 +139,67 @@
 				"is_pushable_by_piston": false
 			},
 			"minecraft:push_through": {
-				"value": 1
+				"value": 0
 			},
 			"minecraft:interact": {
 				"interactions": [
 					{
-						"interact_text": "传送"
+						"interact_text": "传送",
+						"on_interact": {
+							"filters": {
+								"all_of": [
+									{
+										"test": "is_sneaking",
+										"operator": "==",
+										"subject": "other",
+										"value": false
+									},
+									{
+										"test": "has_equipment",
+										"domain": "hand",
+										"operator": "!=",
+										"subject": "other",
+										"value": "nether_star"
+									}
+								]
+							}
+						}
+					},
+					{
+						"interact_text": "管理",
+						"on_interact": {
+							"filters": {
+								"all_of": [
+									{
+										"test": "is_sneaking",
+										"operator": "==",
+										"subject": "other",
+										"value": true
+									}
+								]
+							}
+						}
+					},
+					{
+						"interact_text": "升级",
+						"on_interact": {
+							"filters": {
+								"all_of": [
+									{
+										"test": "has_equipment",
+										"domain": "hand",
+										"operator": "==",
+										"subject": "other",
+										"value": "nether_star"
+									}
+								]
+							}
+						}
 					}
 				]
 			},
 			"minecraft:nameable": {
-				"always_show": false,
+				"always_show": true,
 				"allow_name_tag_renaming": false
 			},
 			"minecraft:damage_sensor": {

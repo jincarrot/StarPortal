@@ -216,27 +216,33 @@ class StarMapScreen(ScreenNodeCls):
                 btn.SetButtonTouchUpCallback(self.onCrystalClick)
 
     def buildLines(self):
-        """为每条"子星塔 -> 其父星塔"的网络连接创建一条白色线段。
-        线段角度只与两点的相对方位有关、与缩放无关，因此只在创建时旋转一次，
-        之后缩放/重布局只更新长度与位置。"""
+        """为每条"星塔 -> 其父星塔"的网络连接创建一条白色线段。枢纽星塔可能有
+        多个父，故为每个可见的父各画一条。线段角度只与两点相对方位有关、与缩放
+        无关，因此只在创建时旋转一次，之后缩放/重布局只更新长度与位置。"""
         self.edges = []
         if not self.container:
             return
         for portal in StarMapData.get("portals", []):
-            parent = self.portalById.get(portal.get("parentId", 0))
-            if not parent:
-                continue
-            ctrl = self.CreateChildControl("star_map.link_line", "line_%d" % portal['id'], self.container)
-            if not ctrl:
-                continue
-            img = ctrl.asImage()
-            if img:
-                img.SetSpriteColor((1.0, 1.0, 1.0))
-                dx = portal['location'][0] - parent['location'][0]
-                dz = portal['location'][2] - parent['location'][2]
-                # 屏幕Y向下，与世界Z同向映射，故直接用 atan2(dz, dx)
-                img.Rotate(math.degrees(math.atan2(dz, dx)))
-            self.edges.append((portal['id'], portal.get("parentId", 0)))
+            parentIds = portal.get("parentIds")
+            if not parentIds:
+                single = portal.get("parentId", 0)
+                parentIds = [single] if single else []
+            for parentId in parentIds:
+                parent = self.portalById.get(parentId)
+                if not parent:
+                    continue
+                name = "line_%d_%d" % (portal['id'], parentId)
+                ctrl = self.CreateChildControl("star_map.link_line", name, self.container)
+                if not ctrl:
+                    continue
+                img = ctrl.asImage()
+                if img:
+                    img.SetSpriteColor((1.0, 1.0, 1.0))
+                    dx = portal['location'][0] - parent['location'][0]
+                    dz = portal['location'][2] - parent['location'][2]
+                    # 屏幕Y向下，与世界Z同向映射，故直接用 atan2(dz, dx)
+                    img.Rotate(math.degrees(math.atan2(dz, dx)))
+                self.edges.append((portal['id'], parentId))
 
     def _portalPos(self, portal):
         center = StarMapData.get("center", [0, 0])
@@ -249,7 +255,7 @@ class StarMapScreen(ScreenNodeCls):
             return
         # 先排连线（在水晶之下），再排水晶
         for childId, parentId in self.edges:
-            line = self.container.GetChildByName("line_%d" % childId)
+            line = self.container.GetChildByName("line_%d_%d" % (childId, parentId))
             child = self.portalById.get(childId)
             parent = self.portalById.get(parentId)
             if not line or not child or not parent:

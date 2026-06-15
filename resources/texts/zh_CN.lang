@@ -1,5 +1,6 @@
 entity.elspirit:core_portal.name=主星塔
 
 item.elspirit:core_portal_item=星核
+item.elspirit:multi_portal_item=聚星石
 item.elspirit:sub_portal_item=微星石
 item.elspirit:stars_controller=星序之盘
