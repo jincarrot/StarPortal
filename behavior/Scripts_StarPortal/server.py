@@ -287,11 +287,23 @@ class EntityService(object):
     @staticmethod
     def clearPortalLight(portal):
         # type: (Entity) -> None
-        loc = portal.location
-        dimension = world.getDimension(portal.dimension.id)
-        # 只清除星塔自己放置的光源方块，避免误删玩家的方块
-        if dimension.getBlock(loc).typeId == Config.PORTAL_LIGHT_BLOCK:
-            dimension.setBlockType(loc, "minecraft:air")
+        """清除星塔放置的光源方块。
+
+        注意：getBlock 在区块未加载时会返回 None，直接取 .typeId 会抛异常；
+        本函数被各删除流程在 portal.remove() 之前调用，一旦抛异常就会中断删除、
+        导致星塔无法删除且表单不关闭。因此这里务必保证不抛异常。
+        """
+        try:
+            loc = portal.location
+            dimension = world.getDimension(portal.dimension.id)
+            block = dimension.getBlock(loc)
+            # 能读到方块时只清除星塔自己的光源（避免误删玩家方块）；
+            # 读不到（区块未加载等）时保守清除，行为与旧版一致。
+            if block is None or block.typeId == Config.PORTAL_LIGHT_BLOCK:
+                dimension.setBlockType(loc, "minecraft:air")
+        except Exception:
+            # 兜底：清除光源失败绝不能阻断删除流程
+            pass
 
 
 # ============================================================
@@ -305,7 +317,8 @@ class TeleportService(object):
         saveHeight = 4
         for i in range(1, 4):
             block = player.dimension.getBlock((location[0], location[1] + i, location[2]))
-            if block.typeId != "minecraft:air":
+            # 区块未加载时 getBlock 返回 None，按空气处理，避免取 .typeId 抛异常
+            if block is not None and block.typeId != "minecraft:air":
                 saveHeight = i - 1
                 break
         return (location[0] + 0.5, location[1] + saveHeight, location[2] + 0.5, location[3])
@@ -587,6 +600,34 @@ class PortalRepository(object):
             rekey(data)
 
         self.save(data)
+        # 清空世界里所有未在数据中记录的星塔实体（孤儿/临时实体）
+        self._removeOrphanEntities(self._collectValidEntityIds(data))
+
+    def _collectValidEntityIds(self, data):
+        # type: (dict) -> set
+        """收集数据树中所有有效的星塔实体id。"""
+        validIds = set()
+        visited = set()
+
+        def collect(nodeDict):
+            for portalData in nodeDict.values():
+                validIds.add(portalData.get('entityId'))
+                if id(portalData) in visited:
+                    continue
+                visited.add(id(portalData))
+                collect(portalData.get("nodes", {}))
+        collect(data)
+        return validIds
+
+    def _removeOrphanEntities(self, validIds):
+        # type: (set) -> None
+        """移除世界中（已加载区块内）所有不在 validIds 中的星塔实体。
+        临时星塔(temp_portal)从不记录在数据中，会被一并清理。"""
+        for dimId in range(3):
+            for entity in world.getDimension(dimId).getEntities():
+                if entity.typeId in Config.PORTAL_ENTITIES and entity.id not in validIds:
+                    EntityService.clearPortalLight(entity)
+                    entity.remove()
 
 
 # ============================================================
@@ -650,10 +691,11 @@ class ParentSection(object):
     """在表单上渲染一个"多选父星塔"区块：一个下拉选择候选父星塔，一个按钮把当前
     选中项加入/移出已选集合，一段文本展示已选父星塔。result() 返回已选父星塔id列表。"""
 
-    def __init__(self, form, candidates, initialParentIds):
+    def __init__(self, form, candidates, initialParentIds, onChange=None):
         # candidates: list[{"label": name, "value": portalId}]
         self._candidates = candidates
         self._chosen = set(initialParentIds)
+        self._onChange = onChange
         self._selection = Observable.create(0, {"clientWritable": True})
         self._info = Observable.create(self._buildInfo())
         form.label("枢纽星塔可连接多个父星塔：")
@@ -681,12 +723,14 @@ class ParentSection(object):
     def _toggle(self):
         if not self._candidates:
             return
-        portalId = self._candidates[self._selection.getData()]['value']
+        portalId = self._selection.getData()
         if portalId in self._chosen:
             self._chosen.remove(portalId)
         else:
             self._chosen.add(portalId)
         self._info.setData(self._buildInfo())
+        if self._onChange:
+            self._onChange()
 
     def hasAny(self):
         return bool(self._chosen)
@@ -1129,6 +1173,19 @@ class StarPortalSystem(object):
                     entity.remove()
         player.setDynamicProperty(Config.INTERACTIONS_PROPERTY, [])
 
+    def _removePortalEntity(self, entityId, portal):
+        # type: (int, Entity | None) -> None
+        """移除星塔实体；若实体无效或所在区块未加载，则加入延后删除队列，
+        待其所在区块加载后由 _deletePendingEntities 清理。整个过程不抛异常。"""
+        if portal and portal.isValid:
+            EntityService.clearPortalLight(portal)
+            portal.remove()
+        else:
+            pending = world.getDynamicProperty(Config.PENDING_DELETE_PROPERTY) or []
+            if entityId not in pending:
+                pending.append(entityId)
+            world.setDynamicProperty(Config.PENDING_DELETE_PROPERTY, pending)
+
     def _showUpgradeForm(self, player, portal):
         data = self.repo.load()
         portalData = self.repo.findByEntityId(portal.id, data)
@@ -1286,12 +1343,12 @@ class StarPortalSystem(object):
             manager.close()
 
             def action():
-                self.stopInteraction(player, portal)
-                EntityService.clearPortalLight(portal)
-                portal.remove()
-                self.repo.delete(portal.id, data)
-                self.repo.save(data)
                 alert.close()
+                entityId = portalData['entityId']
+                self.repo.delete(entityId, data)
+                self.repo.save(data)
+                self.stopInteraction(player)
+                self._removePortalEntity(entityId, portal)
                 player.container.addItem(ItemStack(Config.SUB_ITEM, 1))
             alert = CustomForm.create(player, "删除星塔")
             alert.label("§c您确定要删除这个星塔吗？§r\n删除后将无法使用这个星塔进行传送\n")
@@ -1364,29 +1421,36 @@ class StarPortalSystem(object):
         portalName = Observable.create("", {"clientWritable": True})
         portalColor = Observable.create(0, {"clientWritable": True})
         scale = Observable.create(1 if isSub else 4, {"clientWritable": True})
-        submitVisibility = Observable.create(False)
         parentNode = Observable.create(0, {"clientWritable": True})  # 单父（core/sub）
         anchorToggle = Observable.create(False, {"clientWritable": True})
 
         candidates = [{"label": node['name'], "value": node['id']} for node in self.repo.linkablePortals(player)]
         nodes = [{"label": "无", "value": 0}] + candidates
 
+        # 创建按钮始终显示；条件不满足时按钮上显示原因，点击不处理
+        def validate():
+            if not portalName.getData():
+                return "§c请输入星塔名称"
+            if isSub and not parentNode.getData():
+                return "§c请选择父星塔"
+            if isMulti and not parentSection.hasAny():
+                return "§c请至少选择一个父星塔"
+            return None
+
+        submitLabel = Observable.create("§c请输入星塔名称")
+
+        def refreshButton(*args):
+            error = validate()
+            submitLabel.setData(error if error else "创建星塔")
+        portalName.subscribe(refreshButton)
         if isSub:
-            def onChange(new_value):
-                submitVisibility.setData(bool(parentNode.getData()) and bool(portalName.getData()))
-            portalName.subscribe(onChange)
-            parentNode.subscribe(onChange)
-        else:
-            def onNameChange(new_value):
-                submitVisibility.setData(new_value != "")
-            portalName.subscribe(onNameChange)
+            parentNode.subscribe(refreshButton)
 
         entityType = Config.TYPE_ENTITY[kind]
 
         def onSubmit():
-            if isMulti and not parentSection.hasAny():
-                player.sendMessage("§c枢纽星塔至少需要选择一个父星塔！")
-                return
+            if validate() is not None:
+                return  # 条件不满足，点击不处理
             form.close()
             item = player.mainHand
             item.amount -= 1
@@ -1464,7 +1528,7 @@ class StarPortalSystem(object):
             form.dropdown("星塔颜色", portalColor, Config.COLORS)
             form.slider("星塔尺寸", scale, 1, 16)
             form.divider()
-            parentSection = ParentSection(form, candidates, [])
+            parentSection = ParentSection(form, candidates, [], onChange=refreshButton)
 
         form.divider()
         useSection = PermissionSection(form, "谁可以使用此星塔", "可使用的玩家：", "private")
@@ -1474,7 +1538,7 @@ class StarPortalSystem(object):
         if StarTeam.available():
             form.toggle("是否设置为工会锚点", anchorToggle)
         form.divider()
-        form.button("创建星塔", onSubmit, {"visible": submitVisibility})
+        form.button(submitLabel, onSubmit)
         form.show()
 
     # ------------------------------------------------------------------
@@ -1564,7 +1628,7 @@ class StarPortalSystem(object):
         def repair():
             form.close()
             visibility = Observable.create(True)
-            info = Observable.create("")
+            info = Observable.create("§7修复会：重建数据中记录但丢失的星塔实体，并清除世界中所有未被数据记录的星塔（含残留的临时星塔）。\n ")
 
             def doRepair():
                 visibility.setData(False)
@@ -1717,15 +1781,15 @@ class StarPortalSystem(object):
             ui.close()
 
             def action():
-                self.stopInteraction(player, portal)
-                EntityService.clearPortalLight(portal)
-                portal.remove()
-                self.repo.delete(portal.id, data)
+                # 先关闭表单并落库（关键的持久化），再处理实体，保证即使实体操作异常也不影响删除生效
+                alert.close()
+                entityId = portalData['entityId']
+                self.repo.delete(entityId, data)
                 if isMulti:
                     self.repo.clearHubProperty(portalData)
-                self.stopInteraction(player)
                 self.repo.save(data)
-                alert.close()
+                self.stopInteraction(player)
+                self._removePortalEntity(entityId, portal)
                 player.container.addItem(ItemStack(Config.MULTI_ITEM if isMulti else Config.CORE_ITEM, 1))
             alert = CustomForm.create(player, "删除星塔")
             hint = "§c枢纽星塔会从所有父星塔处一并删除。§r\n" if isMulti else ""
