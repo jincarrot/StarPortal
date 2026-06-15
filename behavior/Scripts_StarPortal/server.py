@@ -713,6 +713,7 @@ class RecipeManager(object):
         comp.AddRecipe(self._coreRecipe())
         comp.AddRecipe(self._subRecipe())
         comp.AddRecipe(self._controllerRecipe())
+        comp.AddRecipe(self._multiRecipe())
 
     def setEnabled(self, enabled):
         world.setDynamicProperty(Config.DISABLE_RECIPES_PROPERTY, not enabled)
@@ -723,7 +724,7 @@ class RecipeManager(object):
             comp.RemoveRecipe(Config.CORE_ITEM, "recipe_shaped")
             comp.RemoveRecipe(Config.SUB_ITEM, "recipe_shaped")
             comp.RemoveRecipe(Config.CONTROLLER_ITEM, "recipe_shaped")
-
+            comp.RemoveRecipe(Config.MULTI_ITEM, "recipe_shaped")
     @staticmethod
     def _coreRecipe():
         return {"minecraft:recipe_shaped": {
@@ -736,6 +737,19 @@ class RecipeManager(object):
                 "S": {"item": "minecraft:gold_nugget"},
             },
             "result": [{"item": Config.CORE_ITEM}],
+        }}
+    
+    @staticmethod
+    def _multiRecipe():
+        return {"minecraft:recipe_shaped": {
+            "description": {"identifier": Config.MULTI_ITEM},
+            "tags": ["crafting_table"],
+            "pattern": [" # ", "#S#", " # "],
+            "key": {
+                "#": {"item": "minecraft:amethyst_shard"},
+                "S": {"item": Config.CORE_ITEM},
+            },
+            "result": [{"item": Config.MULTI_ITEM}],
         }}
 
     @staticmethod
