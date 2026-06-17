@@ -306,7 +306,7 @@ class Entity(object):
         """
         options = BlockRaycastOptions(options if type(options) == dict else {}) if type(options) != BlockRaycastOptions else options
         direction = self.getViewDirection()
-        location = self.location
+        location = self.location + (0, 1, 0)
         dimension = self.dimension.dimId
         blocks = serverApi.getEntitiesOrBlockFromRay(dimension, (location.x, location.y, location.z), (direction.x, direction.y, direction.z), 32, False, RayFilterType.OnlyBlocks)
         temps = serverApi.getEntitiesOrBlockFromRay(dimension, (location.x, location.y, location.z), (direction.x + 0.000001, direction.y + 0.000001, direction.z + 0.000001), 32, False, RayFilterType.OnlyBlocks)
@@ -692,7 +692,10 @@ class Entity(object):
         """
         location = Vector3(location) 
         teleportOptions = TeleportOptions(teleportOptions if type(teleportOptions) == dict else {}) if type(teleportOptions) != TeleportOptions else teleportOptions
-        SComp.CreateDimension(self.__id).ChangeEntityDimension(teleportOptions.dimension.dimId, location.getTuple())
+        if teleportOptions.dimension.dimId != self.dimension.dimId:
+            SComp.CreateDimension(self.__id).ChangeEntityDimension(teleportOptions.dimension.dimId, location.getTuple())
+        else:
+            self.runCommand("tp @s %s %s %s" % (location.x, location.y, location.z))
 
     def triggerEvent(self, eventName):
         """

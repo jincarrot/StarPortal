@@ -48,8 +48,8 @@ class ItemStack(object):
         self.__components = {} # type: dict[str, ItemComponent]
         self.__dynamicProperties = {}
         self.__data = data
-        self.__generateData()
         self.__generateComponents()
+        self.__generateData()
 
     def __str__(self):
         data = {

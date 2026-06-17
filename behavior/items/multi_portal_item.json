@@ -11,7 +11,7 @@
       "minecraft:block_placer": {
         "block": "minecraft:air"
       },
-      "minecraft:icon": "core_portal"
+      "minecraft:icon": "mportal"
     }
   }
 }

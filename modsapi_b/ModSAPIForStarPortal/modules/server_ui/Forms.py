@@ -266,6 +266,7 @@ class CustomFormUI(ScreenNode):
         self.update({"data": self.data, "title": self.titleLabel, "formId": self.formId, "options": self.options})
 
     def Update(self):
+        index = 0
         for (textField, obId, value) in self.textFields:
             text = textField.GetEditText()
             if text != value:
@@ -273,6 +274,9 @@ class CustomFormUI(ScreenNode):
                     "updateObservable%s" % obId, 
                     {"value": text}
                 )
+                self.textFields[index] = (textField, obId, text)
+            index += 1
+        index = 0
         for (toggle, obId, value) in self.toggles:
             toggled = toggle.GetToggleState()
             if toggled != value:
@@ -280,6 +284,9 @@ class CustomFormUI(ScreenNode):
                     "updateObservable%s" % obId, 
                     {"value": toggled}
                 )
+                self.toggles[index] = (toggle, obId, toggled)
+            index += 1
+        index = 0
         for (slider, obId, value, minValue, maxValue) in self.sliders:
             steps = maxValue - minValue
             cur = int(round(slider.GetSliderValue() * steps) + minValue)
@@ -288,6 +295,8 @@ class CustomFormUI(ScreenNode):
                     "updateObservable%s" % obId, 
                     {"value": cur}
                 )
+                self.sliders[index] = (slider, obId, cur, minValue, maxValue)
+            index += 1
 
     def onClickDropdownItem(self, data):
         obId = data['AddTouchEventParams']['obId']

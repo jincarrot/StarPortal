@@ -53,6 +53,9 @@ class Config(object):
     DISABLE_RECIPES_PROPERTY = "star_portal.disableRecipes"
     LAST_CONTROLLER_USE_PROPERTY = "elspirit:lastUseController"
     INTERACTIONS_PROPERTY = "elspirit:interactions"
+    IMMERSIVE_PROPERTY = "elspirit:immersive"  # 全局"沉浸模式"开关（仅管理员可改，对所有玩家生效），默认关闭
+    AREA_TELEPORT_PROPERTY = "elspirit:areaTeleport"  # 全局"范围传送"开关（仅管理员可改），默认关闭
+    AREA_TELEPORT_RADIUS = 1.5  # 范围传送时一并带走的半径（方块）
 
     CORE_ENTITY = "elspirit:core_portal"
     SUB_ENTITY = "elspirit:sub_portal"
@@ -81,6 +84,10 @@ class Config(object):
     CONTROLLER_COOLDOWN = 2400  # tick
     NODE_MIN_SEPARATION = 0.3   # 相邻小水晶端点之间的最小间距（方块）
     REGION_DEFAULT_SIZE = 4
+    # 微缩地图中最远节点距星塔的半径（方块），由主星塔管理界面的"节点显示距离"滑动条控制
+    NODE_DISPLAY_DISTANCE_MIN = 3
+    NODE_DISPLAY_DISTANCE_MAX = 12
+    NODE_DISPLAY_DISTANCE_DEFAULT = 5
 
     COLORS = [
         {"label": "蓝", "value": 0},
@@ -107,29 +114,59 @@ class Config(object):
         "saturation": "饱和",
     }
 
-    MOD_INFO = """
-§b§l星塔模组§r提供了两种星塔水晶：§b§l主星塔（星核）§r和§b§l子星塔（微星石）§r。
-玩家可以使用主星塔和子星塔建立一个星塔网络，在该网络内进行传送。
+    MOD_INFO = """§b§l        ✦ 星 塔 模 组 ✦§r
 
-主星塔
+§7用星塔水晶搭建专属的传送网络，在网络的各个节点间自由穿梭。
 
-使用物品星核后放置。点击（左键右键均可）即可在星塔附近出现星线，点击星线的终点虚影即可传送至对应节点。
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 三种星塔§r
+§e 主星塔§7（星核）— 网络的核心，可连向网络内所有子星塔。
+§e 子星塔§7（微星石）— 网络的终点，只能传送回所属的主星塔。
+§e 枢纽星塔§7— 类似主星塔，可§f同时连接多个父星塔§7把多张网络汇聚起来；也可不接父塔，独立作为根星塔。
 
-同时，点击后，屏幕下方会显示一个管理按钮，点击即可设置星塔的信息（名称，颜色等），且会显示出一个传送点列表，点击即可传送至对应位置。
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 放置与传送§r
+§7· 点击§f主星塔/枢纽星塔§7，周围浮现§f星线§7与微缩星图，点击终点虚影即可传送。
+§7· 点击后屏幕下方出现§f管理按钮§7，可改名、配色、设权限，并显示传送列表。
+§7· 点击§f子星塔§7可选择「传送」或「管理」。
+§7· §f下蹲点击§7你放置的星塔（主／枢纽／子）都能直接打开其管理菜单。
+§7· 管理中可调§f节点显示距离(5~10)§7，改变交互时浮现的微缩星图大小。
 
-蹲下并点击主星塔也可以打开星塔管理菜单。
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 移动星塔§r
+§7§e手持星盘、下蹲点击你放置的星塔§7即可进入移动模式：星塔§f实时跟随你的视线§7移动，§e松开下蹲即固定位置§7（仅放置者可移动）。
 
-使用下界之星可以对星塔进行升级，升级后可以选择一个增益效果，主星塔网络内的玩家将获得该增益效果。
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 升级与领域§r
+§7对主星塔/枢纽星塔使用§f下界之星§7可升级，附加一种§f增益效果§7。
+§7站在其§f领域范围§7内的玩家会持续获得该效果（半径、音效、粒子均可调）。
 
-子星塔
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 权限§r
+§7每座星塔可分别设置：
+§7· §f谁可以使用此星塔§7（公开／私密／指定玩家）
+§7· §f谁可以传送至此星塔§7（公开／私密／指定玩家）
 
-使用物品微星石后放置。点击即可选择传送至主晶塔或设置星塔信息。
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 星盘（星序之盘）§r
+§7· 打开§f传送菜单§7与§f星图（星座地图）§7。
+§7· 移动星塔（见上）。
+§7· 管理员还可用星盘：给予星塔、整体传送／管理／删除、数据修复。
 
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 管理员开关§7（总管理菜单内）§r
+§7· §f沉浸模式§7：尽量不弹表单（如点击子星塔直接传送），对所有玩家生效。
+§7· §f范围传送§7：传送时把玩家周围约 1.5 格内的生物一并带走（不含星塔本身）。
+§7· §f星塔可合成§7：开启后可用工作台合成星塔（配方见下）。
 
-可以在管理员管理界面中启用配方，启用后玩家可以使用一个下界之星，四个钻石，四个紫水晶合成主晶塔，或使用四个紫水晶和一个钻石合成子晶塔。
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§b§l ◆ 合成配方§7（需管理员开启）§r
+§7 主星塔 = 紫水晶碎片×4 ＋ 钻石×4 ＋ 金粒×1
+§7 子星塔 = 紫水晶碎片×4 ＋ 金粒×1
+§7 星　盘 = 紫水晶碎片×4 ＋ 指南针×1
 
-
-ModSAPI提供模组支持
+§8▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
+§8由 §7ModSAPI §8提供模组支持
 """
 
 
@@ -274,9 +311,9 @@ class EntityService(object):
             for dimId in range(3):
                 for portal in world.getDimension(dimId).getEntities():
                     if portal.typeId in Config.PORTAL_ENTITIES:
-                        system.runTimeout(lambda: comp.CreateControlAi(portal.id).SetBlockControlAi(False), 1)
+                        system.runTimeout(lambda portalId=portal.id: comp.CreateControlAi(portalId).SetBlockControlAi(False), 1)
         else:
-            system.runTimeout(lambda: comp.CreateControlAi(portalId).SetBlockControlAi(False), 1)
+            system.runTimeout(lambda portalId=portalId: comp.CreateControlAi(portalId).SetBlockControlAi(False), 1)
 
     @staticmethod
     def createTickingArea(portal):
@@ -295,14 +332,36 @@ class EntityService(object):
         """
         try:
             loc = portal.location
-            dimension = world.getDimension(portal.dimension.id)
-            block = dimension.getBlock(loc)
+            EntityService.clearLightAt(portal.dimension.dimId, loc)
+        except Exception:
+            # 兜底：清除光源失败绝不能阻断删除流程
+            pass
+
+    @staticmethod
+    def clearLightAt(dimId, location):
+        """清除指定位置的星塔光源方块（best-effort，不抛异常）。"""
+        try:
+            dimension = world.getDimension(dimId)
+            block = dimension.getBlock(location)
             # 能读到方块时只清除星塔自己的光源（避免误删玩家方块）；
             # 读不到（区块未加载等）时保守清除，行为与旧版一致。
             if block is None or block.typeId == Config.PORTAL_LIGHT_BLOCK:
-                dimension.setBlockType(loc, "minecraft:air")
+                dimension.setBlockType(location, "minecraft:air")
         except Exception:
-            # 兜底：清除光源失败绝不能阻断删除流程
+            pass
+
+    @staticmethod
+    def placePortalLight(dimId, location):
+        """放置星塔光源方块，但只在目标处为空气或已是光源时才放置，
+        避免吞掉玩家已有的方块（best-effort，不抛异常）。"""
+        try:
+            dimension = world.getDimension(dimId)
+            block = dimension.getBlock(location)
+            if block is None:
+                return  # 区块未加载，无法判断，保守不放置
+            if block.typeId == "minecraft:air" or block.typeId == Config.PORTAL_LIGHT_BLOCK:
+                dimension.setBlockType(location, Config.PORTAL_LIGHT_BLOCK)
+        except Exception:
             pass
 
 
@@ -323,15 +382,48 @@ class TeleportService(object):
                 break
         return (location[0] + 0.5, location[1] + saveHeight, location[2] + 0.5, location[3])
 
+    @staticmethod
+    def _areaCompanions(player):
+        # type: (Player) -> list
+        """范围传送：玩家附近半径内、需要一并传送的实体（排除星塔自身）。"""
+        if not world.getDynamicProperty(Config.AREA_TELEPORT_PROPERTY):
+            return []
+        loc = player.location
+        try:
+            nearby = player.dimension.getEntities({
+                "location": {"x": loc.x, "y": loc.y, "z": loc.z},
+                "maxDistance": Config.AREA_TELEPORT_RADIUS,
+            })
+        except Exception:
+            return []
+        companions = []
+        for entity in nearby:
+            if entity.id == player.id:
+                continue
+            if entity.typeId in Config.PORTAL_ENTITIES:  # 切勿把星塔一起传走
+                continue
+            companions.append(entity)
+        return companions
+
     @classmethod
     def teleport(cls, player, location):
         # type: (Player, tuple) -> None
         target = cls.safeLocation(player, location)
+        targetDim = world.getDimension(target[3])
 
         def doTeleport():
-            player.teleport(target, {"dimension": world.getDimension(target[3])})
+            # 在移动玩家之前，先收集其周围需要一并传送的实体
+            companions = cls._areaCompanions(player)
+            player.teleport(target, {"dimension": targetDim})
             player.addEffect("slow_falling", 100, {"showParticle": False})
             system.sendToClient(player, "teleportEnd", target)
+            for entity in companions:
+                if not entity or not entity.isValid:
+                    continue
+                try:
+                    entity.teleport(target, {"dimension": targetDim})
+                except Exception:
+                    pass
         system.runTimeout(doTeleport, 40)
         system.sendToClient(player, "teleport", player.location.getTuple())
 
@@ -918,9 +1010,12 @@ class StarPortalSystem(object):
         self.repo = PortalRepository()
         self.recipes = RecipeManager()
         self.starMap = StarMapService(self.repo)
+        # 正在移动星塔的会话：playerId -> {"portalId", "lastBlock", "lastLight"}
+        self._movingSessions = {}
         self._registerEvents()
         self.recipes.initial()
         system.runInterval(self.intervalFunc, 100)
+        system.runInterval(self._updateMovingPortals, 1)  # 每帧让移动中的星塔跟随玩家视线
 
     # ------------------------------------------------------------------
     # 事件订阅
@@ -941,6 +1036,8 @@ class StarPortalSystem(object):
     def onPlayerSpawn(self, arg):
         # type: (PlayerSpawnAfterEvent) -> None
         self.stopInteraction(arg.player)
+        # 重生/重连时取消未完成的移动星塔会话
+        self._movingSessions.pop(arg.player.id, None)
         if arg.initialSpawn:
             self.initialNodes()
 
@@ -957,6 +1054,12 @@ class StarPortalSystem(object):
 
     def _dispatchInteract(self, actor, target):
         typeId = target.typeId
+        # 手持星盘下蹲点击自己的星塔 -> 进入移动模式（跟随视线，松开下蹲固定）
+        mainHand = actor.mainHand
+        if (mainHand and mainHand.typeId == Config.CONTROLLER_ITEM and actor.isSneaking
+                and typeId in (Config.CORE_ENTITY, Config.SUB_ENTITY, Config.MULTI_ENTITY)):
+            self._startMovePortal(actor, target)
+            return
         if typeId in (Config.CORE_ENTITY, Config.MULTI_ENTITY):
             # 枢纽星塔功能与主星塔基本相同，复用同一交互逻辑
             self.onInteractCorePortal(actor, target)
@@ -1083,6 +1186,8 @@ class StarPortalSystem(object):
         maxLength = getMaxDistance(portalData, portal.location, set())
         if maxLength <= 0:
             maxLength = 1.0  # 防止除零
+        # 最远节点缩放到的半径（方块），由该主星塔的"节点显示距离"决定
+        displayDistance = portalData.get('nodeDisplayDistance', Config.NODE_DISPLAY_DISTANCE_DEFAULT)
         interactions = []
         expanded = set([id(portalData)])  # 已展开子节点的星塔，DAG/环路防护
 
@@ -1102,7 +1207,7 @@ class StarPortalSystem(object):
                     continue
                 tar = {"x": node['location'][0], "y": node['location'][1] + 0.3 + parentData['scale'] * 0.2, "z": node['location'][2]}
                 d = {"x": tar["x"] - ori2['x'], "y": tar["y"] - ori2['y'], "z": tar["z"] - ori2['z']}
-                d = {"x": d["x"] * 4.0 / maxLength, "y": d["y"] * 4.0 / maxLength, "z": d["z"] * 4.0 / maxLength}
+                d = {"x": d["x"] * displayDistance / maxLength, "y": d["y"] * displayDistance / maxLength, "z": d["z"] * displayDistance / maxLength}
                 dirLength = math.sqrt(d["x"] ** 2 + d["y"] ** 2 + d["z"] ** 2)
                 if 0 < dirLength < minRadius:
                     d = {
@@ -1173,6 +1278,12 @@ class StarPortalSystem(object):
                     entity.remove()
         player.setDynamicProperty(Config.INTERACTIONS_PROPERTY, [])
 
+    @staticmethod
+    def _isImmersive():
+        # type: () -> bool
+        """全局沉浸模式是否开启（尽量不弹出表单，仅管理员可在管理菜单中切换）。"""
+        return bool(world.getDynamicProperty(Config.IMMERSIVE_PROPERTY))
+
     def _removePortalEntity(self, entityId, portal):
         # type: (int, Entity | None) -> None
         """移除星塔实体；若实体无效或所在区块未加载，则加入延后删除队列，
@@ -1185,6 +1296,95 @@ class StarPortalSystem(object):
             if entityId not in pending:
                 pending.append(entityId)
             world.setDynamicProperty(Config.PENDING_DELETE_PROPERTY, pending)
+
+    # ------------------------------------------------------------------
+    # 用星盘移动星塔
+    # ------------------------------------------------------------------
+    def _startMovePortal(self, player, portal):
+        # type: (Player, Entity) -> None
+        portalData = self.repo.findByEntityId(portal.id)
+        if not portalData:
+            return
+        if portalData['owner'] != player.id:
+            player.sendMessage("§c只有星塔的放置者可以移动它！")
+            return
+        # 若该玩家正打开着星塔网络，先收起
+        self.stopInteraction(player)
+        # lastLight 预置为原位置的光源方块坐标，使第一次移动时把它清掉
+        loc = portalData['location']
+        self._movingSessions[player.id] = {
+            "portalId": portal.id,
+            "lastBlock": None,
+            "lastLight": (int(loc[0]), int(loc[1]), int(loc[2]), loc[3]),
+        }
+        player.sendMessage("§a正在移动星塔：星塔会跟随你的视线，§e松开下蹲即可固定位置§a。")
+
+    def _updateMovingPortals(self):
+        """每帧执行：让移动中的星塔跟随各自玩家的视线方块；玩家松开下蹲则固定。"""
+        if not self._movingSessions:
+            return
+        for playerId in list(self._movingSessions.keys()):
+            session = self._movingSessions[playerId]
+            playerEntity = world.getEntity(playerId)
+            if not playerEntity or not playerEntity.isValid:
+                self._movingSessions.pop(playerId, None)
+                continue
+            player = playerEntity.asPlayer()
+            if not player.isSneaking:
+                self._endMovePortal(player, session)
+                continue
+            portal = world.getEntity(session["portalId"])
+            if not portal or not portal.isValid:
+                self._movingSessions.pop(playerId, None)
+                continue
+            try:
+                hit = player.getBlockFromViewDirection()
+            except Exception:
+                hit = None
+            # 兼容返回 BlockRaycastHit(含 .block) 或直接返回方块(含 .location)
+            block = None
+            if hit is not None:
+                inner = getattr(hit, "block", None)
+                if inner is not None:
+                    block = inner
+                elif hasattr(hit, "location"):
+                    block = hit
+            if block is None:
+                continue
+            bpos = block.location
+            blockKey = (int(bpos.x), int(bpos.y), int(bpos.z), player.dimension.dimId)
+            if session["lastBlock"] == blockKey:
+                continue  # 目标方块未变化，省略更新
+            self._movePortalTo(portal, session, blockKey)
+
+    def _movePortalTo(self, portal, session, blockKey):
+        # type: (Entity, dict, tuple) -> None
+        bx, by, bz, dimId = blockKey
+        dimension = world.getDimension(dimId)
+        # 星塔实体悬浮在目标方块上方一格
+        newLoc = (bx + 0.5, by + 1, bz + 0.5, dimId)
+        portal.teleport((newLoc[0], newLoc[1], newLoc[2]), {"dimension": dimension})
+        # 光照方块：清除上一帧的，再在新位置放置（仅当新位置是空气，避免吞掉已有方块）
+        lastLight = session["lastLight"]
+        if lastLight:
+            EntityService.clearLightAt(lastLight[3], lastLight[:3])
+        EntityService.placePortalLight(dimId, (bx, by + 1, bz))
+        session["lastLight"] = (bx, by + 1, bz, dimId)
+        session["lastBlock"] = blockKey
+        # 同步更新世界动态属性中该星塔的坐标
+        data = self.repo.load()
+        portalData = self.repo.findByEntityId(session["portalId"], data)
+        if portalData:
+            portalData['location'] = newLoc
+            portalData['entityId'] = portal.id
+            self.repo.save(data)
+
+    def _endMovePortal(self, player, session):
+        self._movingSessions.pop(player.id, None)
+        portal = world.getEntity(session["portalId"])
+        if portal and portal.isValid:
+            EntityService.createTickingArea(portal)  # 在新位置重建常加载区域
+        player.sendMessage("§a星塔位置已固定。")
 
     def _showUpgradeForm(self, player, portal):
         data = self.repo.load()
@@ -1270,6 +1470,16 @@ class StarPortalSystem(object):
             return
         if not Permissions.isUsable(portalData, player):
             player.sendMessage("§c您没有权限使用这个星塔！")
+            return
+
+        # 下蹲点击：放置者直接打开子星塔管理界面（非放置者则走正常流程）
+        if player.isSneaking and portalData['owner'] == player.id:
+            self._showSubPortalManager(player, portal, portalData, data)
+            return
+
+        # 沉浸模式：可传送的子星塔直接传送，不弹出操作表单
+        if self._isImmersive() and portalData['enable']:
+            self.onInteractSubPortal(player, portal)
             return
 
         def teleport():
@@ -1420,6 +1630,8 @@ class StarPortalSystem(object):
         isCore, isSub, isMulti = kind == "core", kind == "sub", kind == "multi"
         portalName = Observable.create("", {"clientWritable": True})
         portalColor = Observable.create(0, {"clientWritable": True})
+        if kind == "multi":
+            portalColor.setData(4)
         scale = Observable.create(1 if isSub else 4, {"clientWritable": True})
         parentNode = Observable.create(0, {"clientWritable": True})  # 单父（core/sub）
         anchorToggle = Observable.create(False, {"clientWritable": True})
@@ -1433,8 +1645,7 @@ class StarPortalSystem(object):
                 return "§c请输入星塔名称"
             if isSub and not parentNode.getData():
                 return "§c请选择父星塔"
-            if isMulti and not parentSection.hasAny():
-                return "§c请至少选择一个父星塔"
+            # 枢纽星塔不强制要求父节点，可像主星塔一样作为根节点
             return None
 
         submitLabel = Observable.create("§c请输入星塔名称")
@@ -1476,12 +1687,16 @@ class StarPortalSystem(object):
                 "nodes": {},
             }
             if isMulti:
-                # 同一本体对象挂到每个选中的父下，save() 会折叠成 marker
-                for parentId in parentSection.result():
-                    parent = self.repo.findById(parentId, data)
-                    if parent:
-                        parent.setdefault("nodes", {})
-                        parent['nodes'][portal.id] = body
+                parentIds = parentSection.result()
+                if parentIds:
+                    # 同一本体对象挂到每个选中的父下，save() 会折叠成 marker
+                    for parentId in parentIds:
+                        parent = self.repo.findById(parentId, data)
+                        if parent:
+                            parent.setdefault("nodes", {})
+                            parent['nodes'][portal.id] = body
+                else:
+                    data[portal.id] = body  # 未选父星塔 -> 作为根节点
                 portal.nameTag = portalName.getData()
             else:
                 parent = self.repo.findById(parentNode.getData(), data)
@@ -1522,7 +1737,7 @@ class StarPortalSystem(object):
             form = CustomForm.create(player, "创建枢纽星塔")
             form.label("""§b§l枢纽星塔§r功能与§b§l主星塔§r基本相同，但§b§l可以同时连接多个父星塔§r，\n
 用于把多个星塔网络汇聚到一起。\n
-放置后需至少选择一个父星塔。""")
+可选择任意数量的父星塔；不选则与主星塔一样作为根节点。""")
             form.divider()
             form.textField("星塔名称", portalName)
             form.dropdown("星塔颜色", portalColor, Config.COLORS)
@@ -1534,8 +1749,8 @@ class StarPortalSystem(object):
         useSection = PermissionSection(form, "谁可以使用此星塔", "可使用的玩家：", "private")
         form.divider()
         teleportSection = PermissionSection(form, "谁可以传送至此星塔", "可传送至此的玩家：", "private")
-        form.divider()
         if StarTeam.available():
+            form.divider()
             form.toggle("是否设置为工会锚点", anchorToggle)
         form.divider()
         form.button(submitLabel, onSubmit)
@@ -1657,6 +1872,18 @@ class StarPortalSystem(object):
             self.recipes.setEnabled(new_value)
         enableRecipes.subscribe(onEnableRecipesChange)
 
+        immersive = Observable.create(self._isImmersive(), {"clientWritable": True})
+
+        def onImmersiveChange(value):
+            world.setDynamicProperty(Config.IMMERSIVE_PROPERTY, value)
+        immersive.subscribe(onImmersiveChange)
+
+        areaTeleport = Observable.create(bool(world.getDynamicProperty(Config.AREA_TELEPORT_PROPERTY)), {"clientWritable": True})
+
+        def onAreaTeleportChange(value):
+            world.setDynamicProperty(Config.AREA_TELEPORT_PROPERTY, value)
+        areaTeleport.subscribe(onAreaTeleportChange)
+
         form = CustomForm.create(admin, "星塔管理菜单")
         form.spacer()
         # form.button("§b星图（星座地图）", openMap)
@@ -1665,6 +1892,8 @@ class StarPortalSystem(object):
         form.button("传送至星塔", teleport)
         form.button("删除星塔", delete)
         form.button("数据修复", repair)
+        form.toggle("沉浸模式", immersive)
+        form.toggle("开启范围传送", areaTeleport)
         form.toggle("星塔可合成", enableRecipes)
         form.show()
 
@@ -1672,16 +1901,25 @@ class StarPortalSystem(object):
     # 星塔控制器（普通玩家）
     # ------------------------------------------------------------------
     def _showPlayerController(self, arg, player):
+        # type: (ItemStartUseOnAfterEvent, Player) -> None
         form = CustomForm.create(player, "传送")
         # form.button("§b星图（星座地图）", lambda: (form.close(), self.starMap.openFor(player)))
-        form.divider()
-        form.label("请选择要传送的星塔")
+        form.label("请选择要传送的星塔\n ")
 
         def directTeleport(portalData):
             if not StarMapService.checkCooldown(player):
+                form.close()
                 return
             player.teleport(portalData['location'], {"dimension": world.getDimension(portalData['location'][3])})
             player.setDynamicProperty(Config.LAST_CONTROLLER_USE_PROPERTY, world.getAbsoluteTime())
+            controller = player.mainHand
+            durability = controller.getComponent("minecraft:durability") # type: (ItemDurabilityComponent)
+            durability.damage += 1
+            if durability.remain == 0:
+                player.mainHand = None
+            else:
+                player.mainHand = controller
+            form.close()
         for portalData in self.repo.linkablePortals(player):
             form.button(portalData['name'], lambda pd=portalData: directTeleport(pd))
         form.show()
@@ -1708,6 +1946,7 @@ class StarPortalSystem(object):
         portalName = Observable.create(portalData['name'], {"clientWritable": True})
         portalScale = Observable.create(portalData['scale'], {"clientWritable": True})
         portalColor = Observable.create(portalData['color'], {"clientWritable": True})
+        nodeDistance = Observable.create(portalData.get('nodeDisplayDistance', Config.NODE_DISPLAY_DISTANCE_DEFAULT), {"clientWritable": True})
         isMulti = portalData['type'] == 'multi'
         # 候选父星塔：可连接、且不是自身或自身的后代（防止成环）
         candidates = []  # type: list[DropdownItem]
@@ -1728,6 +1967,7 @@ class StarPortalSystem(object):
         manager.textField("星塔名称", portalName)
         manager.slider("星塔尺寸", portalScale, 1, 16)
         manager.dropdown("星塔颜色", portalColor, Config.COLORS)
+        manager.slider("节点显示距离", nodeDistance, Config.NODE_DISPLAY_DISTANCE_MIN, Config.NODE_DISPLAY_DISTANCE_MAX)
         manager.divider()
         useSection = PermissionSection(manager, "谁可以使用此星塔", "可使用的玩家：", Permissions.use(portalData))
         manager.divider()
@@ -1746,25 +1986,27 @@ class StarPortalSystem(object):
         isEnabled.subscribe(onEnableChange)
 
         def submit():
-            if isMulti and not parentSection.hasAny():
-                player.sendMessage("§c枢纽星塔至少需要保留一个父星塔！")
-                return
             portal.nameTag = portalName.getData()
             portal.setProperty("elspirit:color", portalColor.getData())
             portal.setProperty("elspirit:scale", portalScale.getData())
             portalData['name'] = portalName.getData()
             portalData['color'] = portalColor.getData()
             portalData['scale'] = portalScale.getData()
+            portalData['nodeDisplayDistance'] = nodeDistance.getData()
             portalData['usePermissions'] = useSection.result()
             portalData['teleportPermissions'] = teleportSection.result()
             portalData.pop('permissions', None)
             self.repo.delete(portal.id, data)  # 先摘掉所有旧挂接，再按新选择重挂
             if isMulti:
-                for parentId in parentSection.result():
-                    parent = self.repo.findById(parentId, data)
-                    if parent:
-                        parent.setdefault("nodes", {})
-                        parent['nodes'][portal.id] = portalData
+                parentIds = parentSection.result()
+                if parentIds:
+                    for parentId in parentIds:
+                        parent = self.repo.findById(parentId, data)
+                        if parent:
+                            parent.setdefault("nodes", {})
+                            parent['nodes'][portal.id] = portalData
+                else:
+                    data[portal.id] = portalData  # 未选父星塔 -> 作为根节点
             elif parentNode.getData() == 0:
                 data[portal.id] = portalData
             else:
@@ -1804,6 +2046,10 @@ class StarPortalSystem(object):
         # 传送列表
         def onTeleport(targetEntity):
             ui.close()
+            # 沉浸模式：跳过传送确认，直接传送
+            if self._isImmersive():
+                self.onInteractTempPortal(player, targetEntity)
+                return
 
             def action():
                 self.onInteractTempPortal(player, targetEntity)
@@ -1906,7 +2152,7 @@ class StarPortalSystem(object):
                 continue
             visited.add(id(portalData))
             location = portalData['location']
-            world.getDimension(location[3]).setBlockType(location[:3], Config.PORTAL_LIGHT_BLOCK)
+            EntityService.placePortalLight(location[3], location[:3])
             # 枢纽星塔与主星塔一样可承载领域增益
             if portalData['type'] in ('core', 'multi') and portalData['enable']:
                 self._applyCoreEffects(portalData)

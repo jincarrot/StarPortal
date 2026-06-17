@@ -12,7 +12,10 @@
         "block": "minecraft:air"
       },
       "minecraft:icon": "stars_controller",
-      "minecraft:max_stack_size": 1
+      "minecraft:max_stack_size": 1,
+      "minecraft:durability": {
+        "max_durability": 5
+      }
     }
   }
 }

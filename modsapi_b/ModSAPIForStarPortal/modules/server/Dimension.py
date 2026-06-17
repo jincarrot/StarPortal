@@ -24,12 +24,12 @@ class Dimension(object):
             self.__dimId = dimId
             self.__id = MinecraftDimensionTypes[self.__dimId] if self.__dimId < len(MinecraftDimensionTypes) else "dm%s" % self.__dimId
         else:
-            if dimId.find("minecraft:") >= 0:
+            if "minecraft:" in dimId:
                 self.__id = dimId
                 self.__dimId = MinecraftDimensionTypes.index(self.__id)
             else:
                 self.__id = "minecraft:" + dimId
-                self.__dimId = MinecraftDimensionTypes.index(self.__id)
+                self.__dimId = MinecraftDimensionTypes.index(self.__id) if self.__id in MinecraftDimensionTypes else int(dimId.replace("dm", ""))
 
     def __str__(self):
         return "<Dimension> {id: '%s'}" % self.id

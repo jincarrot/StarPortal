@@ -6,6 +6,9 @@
 		"sub_portal": {
 			"textures": "textures/items/sub_portal.png"
 		},
+		"mportal": {
+			"textures": "textures/items/mportal.png"
+		},
 		"stars_controller": {
 			"textures": "textures/items/stars_controller.png"
 		}
