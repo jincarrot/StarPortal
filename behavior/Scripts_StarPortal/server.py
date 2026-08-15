@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import math
 import random
+import time
 
 from ModSAPI.server.beta import *
-from ModSAPI.serverui.beta import *
+from FormUI.lib import *
 
 """
 数据结构（存储在 world 动态属性 elspirit:portals 中）:
@@ -1014,8 +1015,13 @@ class StarPortalSystem(object):
         self._movingSessions = {}
         self._registerEvents()
         self.recipes.initial()
+        self.clickTime = 0
         system.runInterval(self.intervalFunc, 100)
         system.runInterval(self._updateMovingPortals, 1)  # 每帧让移动中的星塔跟随玩家视线
+        Control.register("starui:button", "starui.button", Button())
+        Control.register("starui:panel", "starui.panel", ScrollingPanel(scrollingPanelPath="/content", titlePath="/header/title", closeBtnPath="/header/close"))
+        Screen.setDefaultStyle(ControlType.ScrollingPanel, {"class": "starui:panel"})
+        Screen.setDefaultStyle(ControlType.Button, {"class": "starui:button"})
 
     # ------------------------------------------------------------------
     # 事件订阅
@@ -1596,6 +1602,9 @@ class StarPortalSystem(object):
     # ------------------------------------------------------------------
     def onItemUseOn(self, arg):
         # type: (ItemStartUseOnAfterEvent) -> None
+        if time.time() - self.clickTime < 1:
+            return
+        self.clickTime = time.time()
         if arg.source.typeId != "minecraft:player":
             return
         player = arg.source.asPlayer()
@@ -1931,6 +1940,7 @@ class StarPortalSystem(object):
         self.openStarPortalManager(arg.data['playerId'], arg.data['portalId'])
 
     def openStarPortalManager(self, playerId, portalId):
+        from ModSAPI.serverui.beta import MoreUI, CustomForm, Observable
         playerEntity = world.getEntity(playerId)
         if not playerEntity:
             return

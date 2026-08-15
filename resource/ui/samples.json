@@ -1,0 +1,140 @@
+{
+    "namespace": "fui_samples",
+    "sample": {
+        "type": "screen",
+        "controls": [
+            {
+                "panel@fui_ore_panels.light_panel_thin": {}
+            },
+            {
+                "btns": {
+                    "type": "panel",
+                    "anchor_from": "top_left",
+                    "anchor_to": "top_left",
+                    "offset": [
+                        5.0,
+                        30.0
+                    ],
+                    "size": [
+                        100,
+                        "100%+0px"
+                    ],
+                    "controls": [
+                        {
+                            "normal_btn(0)@fui_ore_btns.normal_btn_thin": {
+                                "anchor_from": "top_middle",
+                                "anchor_to": "top_middle",
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    32
+                                ],
+                                "size": [
+                                    "0%+100px",
+                                    "0%+30px"
+                                ]
+                            }
+                        },
+                        {
+                            "green_btn(0)@fui_ore_btns.green_btn_thin": {
+                                "anchor_from": "top_middle",
+                                "anchor_to": "top_middle",
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    2
+                                ],
+                                "size": [
+                                    "0%+100px",
+                                    "0%+30px"
+                                ]
+                            }
+                        },
+                        {
+                            "red_btn(0)@fui_ore_btns.red_btn_thin": {
+                                "anchor_from": "top_middle",
+                                "anchor_to": "top_middle",
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    62
+                                ],
+                                "size": [
+                                    "0%+100px",
+                                    "0%+30px"
+                                ]
+                            }
+                        },
+                        {
+                            "toggle(0)@fui_ore_chks.toggle_thin": {
+                                "anchor_from": "top_middle",
+                                "anchor_to": "top_middle",
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    90
+                                ]
+                            }
+                        },
+                        {
+                            "textfield(0)@fui_ore_textfields.textfield": {
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    115
+                                ]
+                            }
+                        },
+                        {
+                            "slider(0)@fui_ore_sliders.slider": {
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    158
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "controls2": {
+                    "type": "panel",
+                    "offset": [
+                        0.0,
+                        30.0
+                    ],
+                    "size": [
+                        100,
+                        "100%+0px"
+                    ],
+                    "layer": 1,
+                    "controls": [
+                        {
+                            "dropdown(0)@fui_ore_dropdowns.dropdown": {
+                                "layer": 2
+                            }
+                        },
+                        {
+                            "dropdown(1)@fui_ore_dropdowns.dropdown": {
+                                "layer": 2,
+                                "offset": [
+                                    0,
+                                    44
+                                ]
+                            }
+                        },
+                        {
+                            "dropdown_items(0)@fui_ore_dropdowns.dropdown_items": {
+                                "offset": [
+                                    0,
+                                    59
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

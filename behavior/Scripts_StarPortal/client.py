@@ -2,6 +2,7 @@
 import math
 from ModSAPI.client.beta import *
 import mod.client.extraClientApi as clientApi
+from FormUI.register import *
 
 PausedParticles = [] # type: list[Particle]
 StarRegionParticles = []
@@ -44,29 +45,6 @@ def stopInteraction(arg):
     PausedParticles = []
 
 client.afterEvents.serverEventReceive.subscribe("stopInteraction", stopInteraction)
-
-class HudProxy(clientApi.GetUIScreenProxyCls()):
-
-    def OnCreate(self):
-        self.screen = self.GetScreenNode() # type: clientApi.ScreenNode
-        self.manage_btn = self.screen.GetBaseUIControl("/variables_button_mappings_and_controls/safezone_screen_matrix/inner_matrix/safezone_screen_panel/root_screen_panel/root_panel/manage_btn").asButton()
-        self.manage_btn.AddTouchEventParams({"isSwallow": True})
-        self.manage_btn.SetButtonTouchUpCallback(self.onClickManageBtn)
-        self.hideBtn(None)
-        client.afterEvents.serverEventReceive.subscribe("spawnStarRegion", self.showBtn)
-        client.afterEvents.serverEventReceive.subscribe("stopInteraction", self.hideBtn)
-    
-    def showBtn(self, arg):
-        if arg.data.get("shouldShowManager", False):
-            self.manage_btn.SetVisible(True)
-
-    def hideBtn(self, arg):
-        self.manage_btn.SetVisible(False)
-
-    def onClickManageBtn(self, data):
-        client.sendToServer("openStarPortalManager", {"playerId": client.localPlayer.id, "portalId": PortalId})
-
-clientApi.GetNativeScreenManagerCls().instance().RegisterScreenProxy('hud.hud_screen', "Scripts_StarPortal.client.HudProxy")
 
 def hideNode(arg):
     # type: (ServerEventReceiveAfterEvent) -> None

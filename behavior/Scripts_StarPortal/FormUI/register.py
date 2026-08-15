@@ -1,0 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+[已弃用] 客户端注册，导入即可。
+"""
+import mod.client.extraClientApi as clientApi
+
+from core.config import *
+class A:
+    pass
+
+from core.config import *
+path = A.__module__
+
+client_system_path = path.split("register")[0] + "core.client.system.Client"
+
+clientApi.RegisterSystem(Namespace, SystemNameClient, client_system_path)

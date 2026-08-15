@@ -21,27 +21,49 @@
             "amplifier": 1,
             "duration": 10
         },
-        "PresetInstanceTreeData": [
-
-        ]
+        "PresetInstanceTreeData": []
     },
     "UI": {
-        "customPrefabGroupExpand": [
-
-        ],
+        "customPrefabGroupExpand": [],
         "expandData": {
             "prefab": {
                 "base_controls.background": [
                     "/netease_prefab_screen"
+                ],
+                "fui.w": [
+                    "/netease_prefab_screen"
+                ],
+                "starui.background": [
+                    "/netease_prefab_screen",
+                    "/netease_prefab_screen/background",
+                    "/netease_prefab_screen/background/bottom",
+                    "/netease_prefab_screen/background/bottom/left"
+                ],
+                "starui.button": [
+                    "/netease_prefab_screen",
+                    "/netease_prefab_screen/button"
+                ],
+                "starui.button_bg": [
+                    "/netease_prefab_screen"
+                ],
+                "starui.panel": [
+                    "/netease_prefab_screen",
+                    "/netease_prefab_screen/panel"
+                ],
+                "starui.panel_base_thin": [
+                    "/netease_prefab_screen"
+                ],
+                "starui.scrolling_content": [
+                    "/netease_prefab_screen"
                 ]
             },
             "screen": {
+                "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\lite\\modsapi_r\\ui\\base_controls.json": [],
+                "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\lite\\modsapi_r\\ui\\server_forms.json": [],
                 "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\modsapi_r\\ui\\base_controls.json": [
                     "/netease_prefab_screen"
                 ],
-                "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\modsapi_r\\ui\\debug.json": [
-
-                ]
+                "D:\\MCStudioDownload\\work\\jincarrot@outlook.com\\Cpp\\AddOn\\StarPortal\\modsapi_r\\ui\\debug.json": []
             }
         }
     }

@@ -1,0 +1,698 @@
+{
+    "background": {
+        "type": "panel",
+        "size": [
+            "35%+0px",
+            "80%"
+        ],
+        "controls": [
+            {
+                "header": {
+                    "type": "panel",
+                    "anchor_from": "top_middle",
+                    "anchor_to": "top_middle",
+                    "offset": [
+                        0.0,
+                        "0%+0px"
+                    ],
+                    "size": [
+                        "100%",
+                        "10%x"
+                    ],
+                    "controls": [
+                        {
+                            "1@fui.w": {
+                                "anchor_from": "top_middle",
+                                "anchor_to": "top_middle",
+                                "layer": 1,
+                                "offset": [
+                                    "-30%+0px",
+                                    0
+                                ],
+                                "size": [
+                                    "40%+0px",
+                                    1
+                                ]
+                            }
+                        },
+                        {
+                            "2@fui.w": {
+                                "anchor_from": "top_middle",
+                                "anchor_to": "top_middle",
+                                "layer": 1,
+                                "offset": [
+                                    "30%+0px",
+                                    0
+                                ],
+                                "size": [
+                                    "40%+0px",
+                                    1
+                                ]
+                            }
+                        },
+                        {
+                            "3@fui.w": {
+                                "anchor_from": "top_left",
+                                "layer": 1,
+                                "offset": [
+                                    "0%+0px",
+                                    "50%+0px"
+                                ],
+                                "rotate_angle": 90,
+                                "size": [
+                                    "10%+0px",
+                                    1
+                                ]
+                            }
+                        },
+                        {
+                            "4@fui.w": {
+                                "anchor_from": "top_right",
+                                "layer": 1,
+                                "offset": [
+                                    "0%+0px",
+                                    "50%+0px"
+                                ],
+                                "rotate_angle": 90,
+                                "size": [
+                                    "10%+0px",
+                                    1
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "base@fui.w": {
+                    "alpha": 0.4,
+                    "color": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "layer": 0,
+                    "size": [
+                        "100%",
+                        "100%"
+                    ]
+                }
+            },
+            {
+                "bottom": {
+                    "type": "panel",
+                    "anchor_from": "bottom_middle",
+                    "anchor_to": "bottom_middle",
+                    "offset": [
+                        0.0,
+                        "0%+0px"
+                    ],
+                    "size": [
+                        "100%+0px",
+                        "10%x"
+                    ],
+                    "layer": 1,
+                    "controls": [
+                        {
+                            "left": {
+                                "type": "panel",
+                                "controls": [
+                                    {
+                                        "1@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-20%",
+                                                0
+                                            ],
+                                            "size": [
+                                                "30%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "2@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-30%+0px",
+                                                "35%+0px"
+                                            ],
+                                            "size": [
+                                                "40%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "3@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-37%+0px",
+                                                "-18%+0px"
+                                            ],
+                                            "rotate_angle": -45,
+                                            "size": [
+                                                "5%",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "4@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-42.5%+0px",
+                                                "-35%+0px"
+                                            ],
+                                            "size": [
+                                                "8%+0px",
+                                                "0%+1px"
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "5@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-44.6%+0px",
+                                                0
+                                            ],
+                                            "size": [
+                                                "3.5%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "6@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-46.5%+0px",
+                                                "-18%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "3.5%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "7@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-43%+0px",
+                                                "-40%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "8%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "8@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-45%+0px",
+                                                "-96%+0px"
+                                            ],
+                                            "rotate_angle": -45,
+                                            "size": [
+                                                "5%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "9@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-46.5%+0px",
+                                                "-155%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "8%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "10@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "-50%+0px",
+                                                "-115%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "30%",
+                                                1
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "right": {
+                                "type": "panel",
+                                "controls": [
+                                    {
+                                        "1@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "20%+0px",
+                                                0
+                                            ],
+                                            "size": [
+                                                "30%",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "2@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "30%+0px",
+                                                "35%+0px"
+                                            ],
+                                            "size": [
+                                                "40%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "3@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "37%+0px",
+                                                "-18%+0px"
+                                            ],
+                                            "rotate_angle": 45,
+                                            "size": [
+                                                "5%",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "4@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "42.5%+0px",
+                                                "-35%+0px"
+                                            ],
+                                            "size": [
+                                                "8%+0px",
+                                                "0%+1px"
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "5@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "44.6%+0px",
+                                                0
+                                            ],
+                                            "size": [
+                                                "3.5%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "6@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "46.5%+0px",
+                                                "-18%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "3.5%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "7@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "43%+0px",
+                                                "-40%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "8%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "8@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "44.5%+0px",
+                                                "-96%+0px"
+                                            ],
+                                            "rotate_angle": 45,
+                                            "size": [
+                                                "5%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "9@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "46.5%+0px",
+                                                "-155%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "8%+0px",
+                                                1
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "10@fui.w": {
+                                            "layer": 1,
+                                            "offset": [
+                                                "50%+0px",
+                                                "-115%+0px"
+                                            ],
+                                            "rotate_angle": 90,
+                                            "size": [
+                                                "30%",
+                                                1
+                                            ]
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "button@common.button": {
+        "type": "button",
+        "$label_color": [
+            1,
+            1,
+            1
+        ],
+        "$label_font_scale_factor": 1.25,
+        "$label_font_size": "normal",
+        "$label_text": "Button",
+        "$pressed_button_name": "%netease_editor_template_namespace.click",
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "size": [
+            "100px",
+            30.0
+        ],
+        "button_mappings": [],
+        "default_control": "default",
+        "hover_control": "hover",
+        "is_handle_button_move_event": true,
+        "pressed_control": "pressed",
+        "bindings": [
+            {
+                "binding_type": "collection_details",
+                "binding_collection_name": "",
+                "binding_condition": "always_when_visible"
+            }
+        ],
+        "controls": [
+            {
+                "default@starui.button_bg": {}
+            },
+            {
+                "hover@starui.button_bg": {}
+            },
+            {
+                "pressed@starui.button_bg": {}
+            },
+            {
+                "button_label": {
+                    "type": "label",
+                    "max_size": [
+                        "100%",
+                        "100%"
+                    ],
+                    "alpha": 0.8,
+                    "color": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "font_scale_factor": 1.2,
+                    "font_type": "smooth",
+                    "text": "Button"
+                }
+            }
+        ]
+    },
+    "button_bg": {
+        "type": "panel",
+        "controls": [
+            {
+                "l@fui.w": {
+                    "alpha": 0.6,
+                    "anchor_from": "left_middle",
+                    "anchor_to": "left_middle",
+                    "size": [
+                        1,
+                        "100%"
+                    ]
+                }
+            },
+            {
+                "r@fui.w": {
+                    "alpha": 0.6,
+                    "anchor_from": "right_middle",
+                    "anchor_to": "right_middle",
+                    "size": [
+                        1,
+                        "100%"
+                    ]
+                }
+            },
+            {
+                "t@fui.w": {
+                    "alpha": 0.6,
+                    "anchor_from": "top_middle",
+                    "anchor_to": "top_middle",
+                    "size": [
+                        "100%",
+                        1
+                    ]
+                }
+            },
+            {
+                "b@fui.w": {
+                    "alpha": 0.6,
+                    "anchor_from": "bottom_middle",
+                    "anchor_to": "bottom_middle",
+                    "size": [
+                        "100%",
+                        1
+                    ]
+                }
+            },
+            {
+                "main@fui.w": {
+                    "alpha": 0.6,
+                    "size": [
+                        "100%-4px",
+                        "100%-4px"
+                    ]
+                }
+            }
+        ]
+    },
+    "namespace": "starui",
+    "panel": {
+        "type": "panel",
+        "$header_bg_color": [
+            0.95,
+            0.95,
+            0.95
+        ],
+        "$header_border_alpha": 0.1,
+        "$header_bottom_color": [
+            0.35,
+            0.35,
+            0.35
+        ],
+        "size": [
+            "40%+0px",
+            "90%+0px"
+        ],
+        "controls": [
+            {
+                "background@background": {
+                    "layer": 0,
+                    "size": [
+                        "100%",
+                        "100%"
+                    ]
+                }
+            },
+            {
+                "content@scroll_panel_thin": {
+                    "anchor_from": "top_middle",
+                    "anchor_to": "top_middle",
+                    "layer": 2,
+                    "offset": [
+                        2,
+                        30
+                    ],
+                    "size": [
+                        "92%+0px",
+                        "77%+0px"
+                    ]
+                }
+            },
+            {
+                "header": {
+                    "type": "panel",
+                    "anchor_from": "top_middle",
+                    "anchor_to": "top_middle",
+                    "size": [
+                        "100%",
+                        30
+                    ],
+                    "layer": 8,
+                    "controls": [
+                        {
+                            "title": {
+                                "type": "label",
+                                "offset": [
+                                    0,
+                                    -4.0
+                                ],
+                                "layer": 2,
+                                "color": [
+                                    1,
+                                    1,
+                                    1
+                                ],
+                                "font_scale_factor": 1.25,
+                                "font_type": "smooth",
+                                "text": "Title"
+                            }
+                        },
+                        {
+                            "close@common.light_close_button": {
+                                "$close_button_to_button_id": "button.menu_ok"
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "scale_anim": {
+        "anim_type": "size",
+        "duration": 0.5,
+        "easing": "linear",
+        "from": [
+            "default",
+            20
+        ],
+        "to": [
+            "default",
+            "100%"
+        ]
+    },
+    "scroll_box_thin": {
+        "type": "image",
+        "controls": [
+            {
+                "box@fui.w": {}
+            }
+        ]
+    },
+    "scroll_panel_thin@common.scrolling_panel": {
+        "$scroll_background_image_control": "fui.blank",
+        "$scroll_bar_and_track_size": [
+            "100%c",
+            "100%-2px"
+        ],
+        "$scroll_bar_contained|default": true,
+        "$scroll_bar_right_padding_size|default": [
+            0,
+            0
+        ],
+        "$scroll_box_mouse_image_control": "starui.scroll_box_thin",
+        "$scroll_box_size": [
+            "100%",
+            "100%"
+        ],
+        "$scroll_box_touch_image_control": "starui.scroll_box_thin",
+        "$scroll_box_visible_touch|default": true,
+        "$scroll_size": [
+            1,
+            "100%"
+        ],
+        "$scroll_size_touch": [
+            8,
+            "100%"
+        ],
+        "$scroll_track_image_control": "starui.scroll_track",
+        "$scroll_view_port_offset": [
+            0,
+            0
+        ],
+        "$scroll_view_port_offset_touch": [
+            0,
+            0
+        ],
+        "$scroll_view_port_size": [
+            "100%-8px",
+            "100%-4px"
+        ],
+        "$scroll_view_port_size_touch": [
+            "100%-8px",
+            "100%-4px"
+        ],
+        "$scrolling_content": "starui.scrolling_content",
+        "$show_background": true,
+        "$use_touch_mode|default": true
+    },
+    "scroll_track": {
+        "type": "panel",
+        "controls": [
+            {
+                "main@fui.w": {
+                    "alpha": 0,
+                    "color": [
+                        0,
+                        0,
+                        0
+                    ]
+                }
+            }
+        ]
+    },
+    "scrolling_content": {
+        "type": "panel",
+        "anchor_from": "top_middle",
+        "anchor_to": "top_middle",
+        "size": [
+            "100%",
+            "120%"
+        ]
+    }
+}

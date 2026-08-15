@@ -1,6 +1,6 @@
 [
     {
-        "pack_id": "ebffeae9-4b56-4ab1-92cb-7268366da90f",
+        "pack_id": "edfd3b10-3c45-4dc2-bcba-7a784583d2c4",
         "type": "Addon",
         "version": [
             0,
@@ -9,7 +9,34 @@
         ]
     },
     {
-        "pack_id": "684ca20d-3d1b-47c8-83e4-20fab4e7dac6",
+        "pack_id": "e65da5d3-6756-424a-a19b-6f9aa76848e4",
+        "type": "Addon",
+        "version": [
+            1,
+            0,
+            0
+        ]
+    },
+    {
+        "pack_id": "57a84bcc-e78f-41cd-8b80-1044ce27ba46",
+        "type": "Addon",
+        "version": [
+            0,
+            1,
+            23
+        ]
+    },
+    {
+        "pack_id": "57a84bcc-e78f-41cd-8b80-1044ce37ba46",
+        "type": "Addon",
+        "version": [
+            0,
+            1,
+            23
+        ]
+    },
+    {
+        "pack_id": "e65da5d3-6756-434a-a19b-6f9aa76848e4",
         "type": "Addon",
         "version": [
             1,
